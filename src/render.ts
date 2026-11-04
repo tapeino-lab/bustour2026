@@ -1,5 +1,5 @@
 import type { Shape } from './pieces';
-import { GROUND_TOP, PLATFORM_WIDTH, WORLD_WIDTH, shapeOutline, type PieceBody } from './physics';
+import { GROUND_TOP, PLATFORM_DEPTH, PLATFORM_WIDTH, WORLD_WIDTH, shapeOutline, type PieceBody } from './physics';
 
 export interface View {
   /** CSS pixels per logical pixel. */
@@ -104,21 +104,15 @@ function drawBackground(ctx: CanvasRenderingContext2D, view: View): void {
   ctx.fillRect(0, 0, WORLD_WIDTH, h);
 }
 
-function drawPlatform(ctx: CanvasRenderingContext2D, view: View): void {
+/** The platform is just the green strip, drawn at exactly its physics size. */
+function drawPlatform(ctx: CanvasRenderingContext2D): void {
   const left = (WORLD_WIDTH - PLATFORM_WIDTH) / 2;
-  const bottom = view.camTop + view.viewH + 10;
-  if (bottom < GROUND_TOP) return;
-  ctx.fillStyle = '#8a6a48';
-  ctx.fillRect(left, GROUND_TOP, PLATFORM_WIDTH, bottom - GROUND_TOP);
-  ctx.fillStyle = '#7a5c3c';
-  for (let y = GROUND_TOP + 30; y < bottom; y += 34) {
-    ctx.fillRect(left + 20 + ((y / 34) % 2) * 60, y, 50, 8);
-    ctx.fillRect(left + 130 - ((y / 34) % 2) * 40, y + 16, 44, 8);
-  }
   ctx.fillStyle = '#5bb04a';
   ctx.beginPath();
-  ctx.roundRect(left - 4, GROUND_TOP - 2, PLATFORM_WIDTH + 8, 14, 5);
+  ctx.roundRect(left, GROUND_TOP, PLATFORM_WIDTH, PLATFORM_DEPTH, 4);
   ctx.fill();
+  ctx.fillStyle = '#4a9a3b';
+  ctx.fillRect(left + 2, GROUND_TOP + PLATFORM_DEPTH - 4, PLATFORM_WIDTH - 4, 2);
 }
 
 export function drawWorld(
@@ -133,7 +127,7 @@ export function drawWorld(
   drawBackground(ctx, view);
 
   ctx.setTransform(k, 0, 0, k, 0, -view.camTop * k);
-  drawPlatform(ctx, view);
+  drawPlatform(ctx);
   for (const p of pieces) drawPiece(ctx, p, faces);
 
   if (aim) drawPiece(ctx, aim, faces);

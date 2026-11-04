@@ -7,7 +7,8 @@ import type { PieceDef, Shape } from './pieces';
 export const WORLD_WIDTH = 360;
 export const GROUND_TOP = 0;
 export const PLATFORM_WIDTH = 230;
-export const PLATFORM_DEPTH = 400;
+/** Thickness of the platform (the green strip); there is nothing below it. */
+export const PLATFORM_DEPTH = 12;
 /** A piece whose top edge is this far below the platform top has fallen off. */
 export const FALL_MARGIN = 30;
 export const STEP_SEC = 1 / 60;
