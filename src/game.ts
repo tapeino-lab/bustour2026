@@ -1,12 +1,7 @@
-import Matter from 'matter-js';
 import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
-import {
-  GROUND_TOP, WORLD_WIDTH, createEngine, createPieceBody, hasFallen, towerTop, type PieceBody,
-} from './physics';
+import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, hasFallen, towerTop } from './physics';
 import { drawPreview, drawWorld, type FaceImages, type View } from './render';
-
-const { Body, Composite, Engine, Events } = Matter;
 
 export const STEP_MS = 1000 / 60;
 /** Gap between the tower top and the bottom of a newly spawned piece. */
@@ -21,16 +16,6 @@ const ROTATE_STEP = Math.PI / 4;
 
 export type GameState = 'idle' | 'aim' | 'drop' | 'falling' | 'over';
 
-function boundingRadius(p: PieceBody): number {
-  let r = 0;
-  for (const part of p.body.parts) {
-    for (const v of part.vertices) {
-      r = Math.max(r, Math.hypot(v.x - p.body.position.x, v.y - p.body.position.y));
-    }
-  }
-  return r;
-}
-
 export class Game {
   state: GameState = 'idle';
   score = 0;
@@ -39,7 +24,7 @@ export class Game {
   next: PieceBody | null = null;
   onGameOver: (score: number) => void = () => {};
 
-  private engine: Matter.Engine;
+  private physics: Physics;
   private count = 0;
   private aimX = WORLD_WIDTH / 2;
   private angle = 0;
@@ -51,28 +36,22 @@ export class Game {
   private dragStartX = 0;
   private dragStartAim = 0;
   /** The dropped piece while it is still in free fall. */
-  private freeFall: Matter.Body | null = null;
+  private freeFall: PieceBody | null = null;
 
   constructor(
     private readonly rand: () => number = Math.random,
     private viewH = 640,
   ) {
-    this.engine = this.newEngine();
+    this.physics = this.newPhysics();
     this.camTop = this.baseCamTop();
   }
 
-  private newEngine(): Matter.Engine {
-    const engine = createEngine().engine;
-    Events.on(engine, 'collisionStart', (e) => {
-      if (!this.freeFall) return;
-      for (const pair of e.pairs) {
-        if (pair.bodyA.parent === this.freeFall || pair.bodyB.parent === this.freeFall) {
-          this.freeFall = null;
-          return;
-        }
-      }
-    });
-    return engine;
+  private newPhysics(): Physics {
+    const physics = new Physics();
+    physics.onContact = (piece) => {
+      if (piece === this.freeFall) this.freeFall = null;
+    };
+    return physics;
   }
 
   setViewHeight(h: number): void {
@@ -85,8 +64,7 @@ export class Game {
   }
 
   start(): void {
-    Engine.clear(this.engine);
-    this.engine = this.newEngine();
+    this.physics = this.newPhysics();
     this.freeFall = null;
     this.pieces = [];
     this.score = 0;
@@ -94,21 +72,20 @@ export class Game {
     this.overFrames = 0;
     this.aimX = WORLD_WIDTH / 2;
     this.camTop = this.baseCamTop();
-    this.next = createPieceBody(pieceById(pieceIdForIndex(1, this.rand)), 0, 0);
+    this.next = new PieceBody(pieceById(pieceIdForIndex(1, this.rand)));
     this.spawn();
   }
 
   private spawn(): void {
     this.count++;
     this.current = this.next;
-    this.next = createPieceBody(pieceById(pieceIdForIndex(this.count + 1, this.rand)), 0, 0);
+    this.next = new PieceBody(pieceById(pieceIdForIndex(this.count + 1, this.rand)));
     if (!this.current) return;
     this.angle = 0;
-    Body.setAngle(this.current.body, 0);
-    this.radius = boundingRadius(this.current);
-    const top = towerTop(this.pieces.map((p) => p.body));
+    this.radius = this.current.radius;
+    const top = towerTop(this.pieces);
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
-    Body.setPosition(this.current.body, { x: this.aimX, y: top - SPAWN_GAP - this.radius });
+    this.current.setPose(this.aimX, top - SPAWN_GAP - this.radius, 0);
     this.state = 'aim';
   }
 
@@ -117,13 +94,13 @@ export class Game {
   }
 
   get heightM(): number {
-    return heightMeters(GROUND_TOP - towerTop(this.pieces.map((p) => p.body)));
+    return heightMeters(GROUND_TOP - towerTop(this.pieces));
   }
 
   rotate(): void {
     if (this.state !== 'aim' || !this.current) return;
     this.angle += ROTATE_STEP;
-    Body.setAngle(this.current.body, this.angle);
+    this.current.setPose(this.current.x, this.current.y, this.angle);
   }
 
   pointerDown(x: number): void {
@@ -136,7 +113,7 @@ export class Game {
   pointerMove(x: number): void {
     if (!this.dragging || this.state !== 'aim' || !this.current) return;
     this.aimX = clamp(this.dragStartAim + (x - this.dragStartX), 8, WORLD_WIDTH - 8);
-    Body.setPosition(this.current.body, { x: this.aimX, y: this.current.body.position.y });
+    this.current.setPose(this.aimX, this.current.y);
   }
 
   /** Ends a drag without dropping (finger released over the rotate button). */
@@ -153,11 +130,9 @@ export class Game {
   drop(): void {
     if (this.state !== 'aim' || !this.current) return;
     const p = this.current;
-    Body.setVelocity(p.body, { x: 0, y: 0 });
-    Body.setAngularVelocity(p.body, 0);
-    Composite.add(this.engine.world, p.body);
+    this.physics.add(p);
     this.pieces.push(p);
-    this.freeFall = p.body;
+    this.freeFall = p;
     this.current = null;
     this.settle.reset();
     this.state = 'drop';
@@ -165,12 +140,12 @@ export class Game {
 
   step(): void {
     if (this.state === 'idle' || this.state === 'over') {
-      if (this.state === 'over') Engine.update(this.engine, STEP_MS);
+      if (this.state === 'over') this.physics.step();
       return;
     }
     const ff = this.freeFall;
-    if (ff && ff.velocity.y > MAX_FALL_SPEED) Body.setVelocity(ff, { x: ff.velocity.x, y: MAX_FALL_SPEED });
-    Engine.update(this.engine, STEP_MS);
+    if (ff && ff.velocityY > MAX_FALL_SPEED) ff.velocityY = MAX_FALL_SPEED;
+    this.physics.step();
 
     if (this.state === 'falling') {
       if (++this.overFrames >= OVER_DELAY_FRAMES) {
@@ -180,7 +155,7 @@ export class Game {
       return;
     }
 
-    if (this.pieces.some((p) => hasFallen(p.body))) {
+    if (this.pieces.some((p) => hasFallen(p))) {
       this.state = 'falling';
       this.dragging = false;
       this.current = null;
@@ -189,7 +164,7 @@ export class Game {
     }
 
     if (this.state === 'drop') {
-      const motions = this.pieces.map((p) => ({ speed: p.body.speed, angularSpeed: p.body.angularSpeed }));
+      const motions = this.pieces.map((p) => ({ speed: p.speed, angularSpeed: p.angularSpeed }));
       if (this.settle.update(motions)) {
         this.score = this.pieces.length;
         this.spawn();
@@ -200,7 +175,7 @@ export class Game {
   private updateCamera(): void {
     let target = this.baseCamTop();
     if (this.current) {
-      target = Math.min(target, this.current.body.position.y - this.radius - HUD_SPACE);
+      target = Math.min(target, this.current.y - this.radius - HUD_SPACE);
     } else if (this.pieces.length) {
       target = Math.min(target, this.camTop);
     }

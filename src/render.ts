@@ -1,5 +1,5 @@
 import type { Shape } from './pieces';
-import { GROUND_TOP, PLATFORM_WIDTH, WORLD_WIDTH, localToWorld, type PieceBody } from './physics';
+import { GROUND_TOP, PLATFORM_WIDTH, WORLD_WIDTH, shapeOutline, type PieceBody } from './physics';
 
 export interface View {
   /** CSS pixels per logical pixel. */
@@ -49,23 +49,22 @@ function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
 
 /** Draws a piece in world coordinates (the current transform must map world → screen). */
 export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: FaceImages): void {
-  const parts = p.body.parts.length > 1 ? p.body.parts.slice(1) : [p.body];
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.angle);
+  // Body parts are drawn from the same outline the physics uses, so what you see is what collides.
   ctx.lineJoin = 'round';
-  for (const part of parts) {
+  for (const part of p.def.parts) {
     ctx.beginPath();
-    part.vertices.forEach((v, i) => (i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)));
+    shapeOutline(part).forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
     ctx.closePath();
-    ctx.fillStyle = part.render.fillStyle ?? '#ccc';
+    ctx.fillStyle = part.color;
     ctx.fill();
     ctx.strokeStyle = 'rgba(40, 30, 20, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
 
-  const o = localToWorld(p, 0, 0);
-  ctx.save();
-  ctx.translate(o.x, o.y);
-  ctx.rotate(p.body.angle);
   for (const d of p.def.details ?? []) {
     shapePath(ctx, d);
     ctx.fillStyle = d.color;
@@ -151,11 +150,12 @@ export function drawPreview(
   size: number,
 ): void {
   const k = view.scale * view.dpr;
-  const w = p.body.bounds.max.x - p.body.bounds.min.x;
-  const h = p.body.bounds.max.y - p.body.bounds.min.y;
+  const b = p.bounds;
+  const w = b.maxX - b.minX;
+  const h = b.maxY - b.minY;
   const s = Math.min(size / w, size / h, 0.6);
-  const bx = (p.body.bounds.min.x + p.body.bounds.max.x) / 2;
-  const by = (p.body.bounds.min.y + p.body.bounds.max.y) / 2;
+  const bx = (b.minX + b.maxX) / 2;
+  const by = (b.minY + b.maxY) / 2;
   ctx.setTransform(k * s, 0, 0, k * s, (cx - bx * s) * k, (cy - by * s) * k);
   drawPiece(ctx, p, faces);
 }

@@ -14,9 +14,9 @@ describe('Game', () => {
   it('spawns a piece a little above the tower top', () => {
     const g = new Game(seeded(), 700);
     g.start();
-    const b = g.current!.body;
-    expect(b.bounds.max.y).toBeLessThanOrEqual(GROUND_TOP - SPAWN_GAP + 0.01);
-    expect(b.bounds.max.y).toBeGreaterThan(GROUND_TOP - SPAWN_GAP - 150);
+    const b = g.current!;
+    expect(b.bounds.maxY).toBeLessThanOrEqual(GROUND_TOP - SPAWN_GAP + 0.01);
+    expect(b.bounds.maxY).toBeGreaterThan(GROUND_TOP - SPAWN_GAP - 150);
   });
 
   it('spawns the next piece relative to the new tower top', () => {
@@ -25,20 +25,20 @@ describe('Game', () => {
     g.drop();
     for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
     expect(g.state).toBe('aim');
-    const top = towerTop(g.pieces.map((p) => p.body));
-    expect(g.current!.body.bounds.max.y).toBeLessThanOrEqual(top - SPAWN_GAP + 0.01);
-    expect(g.current!.body.bounds.max.y).toBeGreaterThan(top - SPAWN_GAP - 150);
+    const top = towerTop(g.pieces);
+    expect(g.current!.bounds.maxY).toBeLessThanOrEqual(top - SPAWN_GAP + 0.01);
+    expect(g.current!.bounds.maxY).toBeGreaterThan(top - SPAWN_GAP - 150);
   });
 
   it('limits the fall speed until the piece lands', () => {
     const g = new Game(seeded(), 700);
     g.start();
-    const body = g.current!.body;
+    const piece = g.current!;
     g.drop();
     let maxVy = 0;
     for (let i = 0; i < 40; i++) {
       g.step();
-      maxVy = Math.max(maxVy, body.velocity.y);
+      maxVy = Math.max(maxVy, piece.velocityY);
     }
     expect(maxVy).toBeLessThanOrEqual(MAX_FALL_SPEED + 0.3);
     expect(maxVy).toBeGreaterThan(MAX_FALL_SPEED * 0.8);

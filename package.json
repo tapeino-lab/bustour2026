@@ -1,7 +1,7 @@
 {
   "name": "bustour2026",
   "private": true,
-  "version": "0.0.04",
+  "version": "0.0.05",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,12 +10,8 @@
     "lint": "eslint . && tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "matter-js": "^0.20.0"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/matter-js": "^0.20.2",
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
@@ -23,5 +19,8 @@
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.5",
     "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "planck": "^1.4.2"
   }
 }
