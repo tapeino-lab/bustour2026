@@ -10,7 +10,7 @@ export const SPAWN_GAP = 70;
 export const FREE_FALL_GRAVITY = 0.4;
 const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
-const GROUND_FROM_BOTTOM = 130;
+const GROUND_FROM_BOTTOM = 190;
 const OVER_DELAY_FRAMES = 70;
 const ROTATE_STEP = Math.PI / 4;
 

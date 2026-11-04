@@ -48,6 +48,22 @@ describe('Game', () => {
     expect(piece.body!.getGravityScale()).toBe(1);
   });
 
+  it('draws a just-dropped piece where it is, not blended from an old pose', () => {
+    const g = new Game(seeded(), 700);
+    g.start();
+    g.pointerDown(180);
+    g.pointerMove(240);
+    g.rotate();
+    const piece = g.current!;
+    g.pointerUp();
+    for (const alpha of [0, 0.5, 1]) {
+      const pose = piece.drawPose(alpha);
+      expect(pose.x).toBeCloseTo(piece.x, 6);
+      expect(pose.y).toBeCloseTo(piece.y, 6);
+      expect(pose.angle).toBeCloseTo(piece.angle, 6);
+    }
+  });
+
   it('does not drop when the drag is cancelled', () => {
     const g = new Game(seeded(), 700);
     g.start();

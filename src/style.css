@@ -30,7 +30,7 @@ html, body {
   /* Wide bottom button; the right side is kept free for a later button. */
   left: 19%;
   right: 19%;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  bottom: calc(6px + env(safe-area-inset-bottom));
   height: 64px;
   border-radius: 18px;
   border: 4px solid #fff;

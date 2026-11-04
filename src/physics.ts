@@ -143,6 +143,8 @@ export class PieceBody {
     this.py = y;
     this.ang = angle;
     if (this.body) this.body.setTransform(new Vec2(x / PX, y / PX), angle);
+    // A teleport is not motion: drawing must not blend from the old pose.
+    this.savePrev();
   }
 
   /** Local pixel coordinate → world pixel coordinate, using the current pose. */
@@ -239,6 +241,7 @@ export class Physics {
       body.createFixture(new Polygon(verts), { density: DENSITY, friction: FRICTION, restitution: 0 });
     }
     piece.body = body;
+    piece.savePrev();
   }
 
   step(): void {
