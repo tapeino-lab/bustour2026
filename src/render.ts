@@ -13,20 +13,39 @@ export interface View {
 
 export type FaceImages = Map<string, HTMLImageElement>;
 
-function shapePath(ctx: CanvasRenderingContext2D, s: Shape): void {
-  ctx.beginPath();
+// Paths are built once per shape and reused every frame (no per-frame allocation).
+const detailPaths = new Map<Shape, Path2D>();
+const partPaths = new Map<Shape, Path2D>();
+
+function detailPath(s: Shape): Path2D {
+  let path = detailPaths.get(s);
+  if (path) return path;
+  path = new Path2D();
   switch (s.kind) {
     case 'rect':
-      ctx.roundRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h, s.round ?? 0);
+      path.roundRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h, s.round ?? 0);
       break;
     case 'circle':
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      path.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       break;
     case 'poly':
-      s.points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
-      ctx.closePath();
+      s.points.forEach(([x, y], i) => (i === 0 ? path!.moveTo(x, y) : path!.lineTo(x, y)));
+      path.closePath();
       break;
   }
+  detailPaths.set(s, path);
+  return path;
+}
+
+/** Body parts use the same outline as the physics, so what you see is what collides. */
+function partPath(s: Shape): Path2D {
+  let path = partPaths.get(s);
+  if (path) return path;
+  path = new Path2D();
+  shapeOutline(s).forEach(([x, y], i) => (i === 0 ? path!.moveTo(x, y) : path!.lineTo(x, y)));
+  path.closePath();
+  partPaths.set(s, path);
+  return path;
 }
 
 function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
@@ -48,27 +67,24 @@ function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
 }
 
 /** Draws a piece in world coordinates (the current transform must map world → screen). */
-export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: FaceImages): void {
+export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: FaceImages, alpha = 1): void {
+  const pose = p.drawPose(alpha);
   ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(p.angle);
-  // Body parts are drawn from the same outline the physics uses, so what you see is what collides.
+  ctx.translate(pose.x, pose.y);
+  ctx.rotate(pose.angle);
   ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(40, 30, 20, 0.45)';
+  ctx.lineWidth = 1.5;
   for (const part of p.def.parts) {
-    ctx.beginPath();
-    shapeOutline(part).forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
-    ctx.closePath();
+    const path = partPath(part);
     ctx.fillStyle = part.color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(40, 30, 20, 0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.fill(path);
+    ctx.stroke(path);
   }
 
   for (const d of p.def.details ?? []) {
-    shapePath(ctx, d);
     ctx.fillStyle = d.color;
-    ctx.fill();
+    ctx.fill(detailPath(d));
   }
   const f = p.def.face;
   if (f) {
@@ -95,13 +111,9 @@ export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: Fa
   ctx.restore();
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, view: View): void {
-  const h = view.viewH;
-  const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#6ec3f0');
-  sky.addColorStop(1, '#d8f0fb');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, WORLD_WIDTH, h);
+/** The sky is a CSS background on the canvas; here we only clear. */
+function drawBackground(ctx: CanvasRenderingContext2D): void {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 /** The platform is just the green strip, drawn at exactly its physics size. */
@@ -121,14 +133,15 @@ export function drawWorld(
   pieces: PieceBody[],
   aim: PieceBody | null,
   faces: FaceImages,
+  alpha = 1,
 ): void {
   const k = view.scale * view.dpr;
-  ctx.setTransform(k, 0, 0, k, 0, 0);
-  drawBackground(ctx, view);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  drawBackground(ctx);
 
   ctx.setTransform(k, 0, 0, k, 0, -view.camTop * k);
   drawPlatform(ctx);
-  for (const p of pieces) drawPiece(ctx, p, faces);
+  for (const p of pieces) drawPiece(ctx, p, faces, alpha);
 
   if (aim) drawPiece(ctx, aim, faces);
 }

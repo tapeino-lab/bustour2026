@@ -85,6 +85,12 @@ export class PieceBody {
   private py: number;
   private ang = 0;
   private readonly outline: Pt[];
+  /** Pose before the last physics step, for drawing between steps. */
+  private prevX: number;
+  private prevY: number;
+  private prevAngle = 0;
+  private boundsCache: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  private boundsKey = [NaN, NaN, NaN];
 
   constructor(
     readonly def: PieceDef,
@@ -93,7 +99,32 @@ export class PieceBody {
   ) {
     this.px = x;
     this.py = y;
+    this.prevX = x;
+    this.prevY = y;
     this.outline = def.parts.flatMap(shapeOutline);
+  }
+
+  /** Remembers the current pose; call right before each physics step. */
+  savePrev(): void {
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.prevAngle = this.angle;
+  }
+
+  /** Pose to draw: between the previous and current step by `alpha` (0..1). */
+  drawPose(alpha: number): { x: number; y: number; angle: number } {
+    if (!this.body) return { x: this.px, y: this.py, angle: this.ang };
+    const t = Math.max(0, Math.min(1, alpha));
+    return {
+      x: this.prevX + (this.x - this.prevX) * t,
+      y: this.prevY + (this.y - this.prevY) * t,
+      angle: this.prevAngle + (this.angle - this.prevAngle) * t,
+    };
+  }
+
+  /** Scales gravity for this piece (used for the gentle first fall). */
+  setGravityScale(scale: number): void {
+    this.body?.setGravityScale(scale);
   }
 
   get x(): number {
@@ -121,16 +152,32 @@ export class PieceBody {
     return { x: this.x + lx * c - ly * s, y: this.y + lx * s + ly * c };
   }
 
+  /** Axis-aligned bounds in world pixels (cached until the pose changes; do not mutate). */
   get bounds(): Bounds {
-    const b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    const x = this.x;
+    const y = this.y;
+    const a = this.angle;
+    const k = this.boundsKey;
+    if (k[0] === x && k[1] === y && k[2] === a) return this.boundsCache;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
     for (const [lx, ly] of this.outline) {
-      const p = this.localToWorld(lx, ly);
-      b.minX = Math.min(b.minX, p.x);
-      b.minY = Math.min(b.minY, p.y);
-      b.maxX = Math.max(b.maxX, p.x);
-      b.maxY = Math.max(b.maxY, p.y);
+      const wx = x + lx * c - ly * s;
+      const wy = y + lx * s + ly * c;
+      if (wx < minX) minX = wx;
+      if (wx > maxX) maxX = wx;
+      if (wy < minY) minY = wy;
+      if (wy > maxY) maxY = wy;
     }
-    return b;
+    this.boundsCache = { minX, minY, maxX, maxY };
+    k[0] = x;
+    k[1] = y;
+    k[2] = a;
+    return this.boundsCache;
   }
 
   /** Largest distance from the local origin to the outline. */
@@ -141,11 +188,6 @@ export class PieceBody {
   /** Vertical velocity in px per step. */
   get velocityY(): number {
     return this.body ? (this.body.getLinearVelocity().y * PX) / 60 : 0;
-  }
-  set velocityY(vy: number) {
-    if (!this.body) return;
-    const v = this.body.getLinearVelocity();
-    this.body.setLinearVelocity(new Vec2(v.x, (vy * 60) / PX));
   }
 
   /** Speed in px per step. */

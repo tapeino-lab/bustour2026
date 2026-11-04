@@ -9,26 +9,13 @@
   <body>
     <div id="app">
       <canvas id="game"></canvas>
-      <button id="rotate" class="hidden" aria-label="かいてん">↻ かいてん</button>
-      <section id="title" class="overlay">
-        <h1>やまなし<br /><span>バスタワー</span></h1>
-        <p class="lead">どうぶつを つみあげよう！<br />さいしょと 10こめごとに バスが くるよ</p>
-        <ul class="howto">
-          <li>ゆびで よこに うごかして はなすと おちる</li>
-          <li>「かいてん」ボタンで まわる</li>
-          <li>ボタンの うえで ゆびを はなすと やめられる</li>
-          <li>ひとつでも おちたら おしまい</li>
-        </ul>
-        <button id="start" class="primary">スタート</button>
-        <p class="best">じこベスト <b id="title-best">0</b> こ</p>
-      </section>
+      <button id="rotate" aria-label="かいてん">↻ かいてん</button>
       <section id="over" class="overlay hidden">
         <h2>おちちゃった！</h2>
         <p class="result"><b id="over-score">0</b> こ つめた</p>
         <p class="best" id="over-best-line">じこベスト <b id="over-best">0</b> こ</p>
         <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
         <button id="retry" class="primary">もういちど</button>
-        <button id="to-title" class="secondary">タイトルへ</button>
       </section>
       <div id="version"></div>
     </div>

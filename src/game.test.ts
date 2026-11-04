@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Game, MAX_FALL_SPEED, SPAWN_GAP } from './game';
+import { FREE_FALL_GRAVITY, Game, SPAWN_GAP } from './game';
 import { GROUND_TOP, towerTop } from './physics';
 
 function seeded(seed = 1): () => number {
@@ -30,18 +30,22 @@ describe('Game', () => {
     expect(g.current!.bounds.maxY).toBeGreaterThan(top - SPAWN_GAP - 150);
   });
 
-  it('limits the fall speed until the piece lands', () => {
+  it('falls with gentle, increasing speed until it lands, then gets full gravity back', () => {
     const g = new Game(seeded(), 700);
     g.start();
     const piece = g.current!;
     g.drop();
-    let maxVy = 0;
-    for (let i = 0; i < 40; i++) {
+    const vs: number[] = [];
+    for (let i = 0; i < 10; i++) {
       g.step();
-      maxVy = Math.max(maxVy, piece.velocityY);
+      vs.push(piece.velocityY);
     }
-    expect(maxVy).toBeLessThanOrEqual(MAX_FALL_SPEED + 0.3);
-    expect(maxVy).toBeGreaterThan(MAX_FALL_SPEED * 0.8);
+    for (let i = 1; i < vs.length; i++) expect(vs[i]).toBeGreaterThan(vs[i - 1]);
+    const fullGravityPerStep = 1000 / 3600;
+    expect(vs[9]).toBeGreaterThan(10 * fullGravityPerStep * FREE_FALL_GRAVITY * 0.8);
+    expect(vs[9]).toBeLessThan(10 * fullGravityPerStep * FREE_FALL_GRAVITY * 1.2);
+    for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
+    expect(piece.body!.getGravityScale()).toBe(1);
   });
 
   it('does not drop when the drag is cancelled', () => {

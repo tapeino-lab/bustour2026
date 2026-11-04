@@ -6,8 +6,8 @@ import { drawPreview, drawWorld, type FaceImages, type View } from './render';
 export const STEP_MS = 1000 / 60;
 /** Gap between the tower top and the bottom of a newly spawned piece. */
 export const SPAWN_GAP = 70;
-/** Fall speed limit (px per step) for a dropped piece until it first touches something. */
-export const MAX_FALL_SPEED = 3;
+/** Gravity multiplier for a dropped piece until it first touches something: a gentle, accelerating fall. */
+export const FREE_FALL_GRAVITY = 0.4;
 const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
 const GROUND_FROM_BOTTOM = 130;
@@ -49,7 +49,10 @@ export class Game {
   private newPhysics(): Physics {
     const physics = new Physics();
     physics.onContact = (piece) => {
-      if (piece === this.freeFall) this.freeFall = null;
+      if (piece === this.freeFall) {
+        piece.setGravityScale(1);
+        this.freeFall = null;
+      }
     };
     return physics;
   }
@@ -131,6 +134,7 @@ export class Game {
     if (this.state !== 'aim' || !this.current) return;
     const p = this.current;
     this.physics.add(p);
+    p.setGravityScale(FREE_FALL_GRAVITY);
     this.pieces.push(p);
     this.freeFall = p;
     this.current = null;
@@ -140,12 +144,10 @@ export class Game {
 
   step(): void {
     if (this.state === 'idle' || this.state === 'over') {
-      if (this.state === 'over') this.physics.step();
+      if (this.state === 'over') this.stepPhysics();
       return;
     }
-    const ff = this.freeFall;
-    if (ff && ff.velocityY > MAX_FALL_SPEED) ff.velocityY = MAX_FALL_SPEED;
-    this.physics.step();
+    this.stepPhysics();
 
     if (this.state === 'falling') {
       if (++this.overFrames >= OVER_DELAY_FRAMES) {
@@ -172,6 +174,11 @@ export class Game {
     }
   }
 
+  private stepPhysics(): void {
+    for (const p of this.pieces) p.savePrev();
+    this.physics.step();
+  }
+
   private updateCamera(): void {
     let target = this.baseCamTop();
     if (this.current) {
@@ -182,10 +189,11 @@ export class Game {
     this.camTop += (target - this.camTop) * 0.12;
   }
 
-  render(ctx: CanvasRenderingContext2D, scale: number, dpr: number, faces: FaceImages): void {
+  /** `alpha` (0..1) is how far we are between the last physics step and the next one. */
+  render(ctx: CanvasRenderingContext2D, scale: number, dpr: number, faces: FaceImages, alpha = 1): void {
     this.updateCamera();
     const view: View = { scale, dpr, viewH: this.viewH, camTop: this.camTop };
-    drawWorld(ctx, view, this.pieces, this.current, faces);
+    drawWorld(ctx, view, this.pieces, this.current, faces, alpha);
     if (this.state === 'idle') return;
 
     const k = scale * dpr;

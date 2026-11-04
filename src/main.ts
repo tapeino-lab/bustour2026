@@ -3,6 +3,7 @@ import { loadFaces } from './faces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { loadBest, saveBest } from './storage';
+import { fetchLatestVersion, reloadToVersion } from './update';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -10,7 +11,6 @@ const app = $<HTMLDivElement>('app');
 const canvas = $<HTMLCanvasElement>('game');
 const ctx = canvas.getContext('2d')!;
 const rotateBtn = $<HTMLButtonElement>('rotate');
-const titleEl = $('title');
 const overEl = $('over');
 
 $('version').textContent = `v${__APP_VERSION__}`;
@@ -21,20 +21,18 @@ let best = loadBest();
 let scale = 1;
 let dpr = 1;
 
-function showBest(): void {
-  $('title-best').textContent = String(best);
-  $('over-best').textContent = String(best);
-}
-showBest();
+/** A newer published version found at game over; loaded when the player retries. */
+let pendingUpdate: string | null = null;
 
 function resize(): void {
   const h = window.innerHeight;
   const w = Math.min(window.innerWidth, Math.round(h * 0.62));
   // Setting canvas.width/height clears the canvas, so skip resize events that change nothing.
-  const d = Math.min(window.devicePixelRatio || 1, 3);
+  // Capped at 2: a 3x canvas costs over twice the pixels for little visible gain.
+  const d = Math.min(window.devicePixelRatio || 1, 2);
   if (canvas.width === Math.round(w * d) && canvas.height === Math.round(h * d)) return;
   app.style.width = `${w}px`;
-  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  dpr = d;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
   scale = w / WORLD_WIDTH;
@@ -82,7 +80,10 @@ rotateBtn.addEventListener('pointerdown', (e) => {
 });
 
 function startGame(): void {
-  titleEl.classList.add('hidden');
+  if (pendingUpdate) {
+    reloadToVersion(pendingUpdate);
+    return;
+  }
   overEl.classList.add('hidden');
   rotateBtn.classList.remove('hidden');
   game.start();
@@ -94,19 +95,18 @@ game.onGameOver = (score) => {
     best = score;
     saveBest(best);
   }
-  showBest();
+  $('over-best').textContent = String(best);
   $('over-score').textContent = String(score);
   $('new-best').classList.toggle('hidden', !isNew);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
+  void fetchLatestVersion().then((v) => {
+    if (v && v !== __APP_VERSION__) pendingUpdate = v;
+  });
 };
 
-$('start').addEventListener('click', startGame);
 $('retry').addEventListener('click', startGame);
-$('to-title').addEventListener('click', () => {
-  overEl.classList.add('hidden');
-  titleEl.classList.remove('hidden');
-});
+startGame();
 
 let last = performance.now();
 let acc = 0;
@@ -117,7 +117,7 @@ function frame(now: number): void {
     game.step();
     acc -= STEP_MS;
   }
-  game.render(ctx, scale, dpr, faces);
+  game.render(ctx, scale, dpr, faces, acc / STEP_MS);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

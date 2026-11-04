@@ -23,6 +23,12 @@ npm run build  # dist/ に出力
 
 main に push すると GitHub Actions（.github/workflows/deploy.yml）で GitHub Pages に公開されます。
 
+物理演算は planck.js（Box2D 系）。
+
+### 更新の反映
+
+ビルド時に `version.json`（package.json のバージョン）を一緒に公開します。遊んでいる端末はゲームオーバーのたびにこれを確認し、新しいバージョンが出ていれば「もういちど」を押したときに新しい版を読み込み直します（`?v=バージョン` を付けてキャッシュを避けます）。
+
 ## 顔写真の差し替え
 
 1. 画像（正方形推奨）を `public/faces/` に置く（例: `public/faces/elephant.png`）。
