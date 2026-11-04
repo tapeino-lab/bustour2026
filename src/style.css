@@ -1,0 +1,103 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #23324a;
+  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  color: #23324a;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+#app {
+  position: relative;
+  margin: 0 auto;
+  height: 100%;
+  overflow: hidden;
+}
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.hidden { display: none !important; }
+#rotate {
+  position: absolute;
+  right: 18px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: #f28c28;
+  color: #fff;
+  font-size: 40px;
+  line-height: 1;
+  box-shadow: 0 4px 0 #b9631a;
+  touch-action: manipulation;
+}
+#rotate:active { transform: translateY(3px); box-shadow: 0 1px 0 #b9631a; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(2px);
+}
+h1 {
+  margin: 0 0 4px;
+  font-size: 30px;
+  line-height: 1.15;
+  color: #23324a;
+}
+h1 span {
+  display: inline-block;
+  font-size: 46px;
+  color: #e6403a;
+  text-shadow: 3px 3px 0 #fff;
+}
+h2 { margin: 0; font-size: 30px; color: #e6403a; }
+.lead { margin: 0; font-size: 16px; font-weight: bold; line-height: 1.6; }
+.howto {
+  margin: 0;
+  padding: 10px 16px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.8;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+}
+.result { margin: 0; font-size: 20px; }
+.result b { font-size: 52px; color: #23324a; }
+.best { margin: 0; font-size: 15px; }
+.newbest { margin: 0; font-weight: bold; color: #e6403a; }
+button.primary, button.secondary {
+  min-width: 200px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 999px;
+  font-size: 20px;
+  font-weight: bold;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+button.primary { background: #e6403a; color: #fff; box-shadow: 0 5px 0 #a82a25; }
+button.primary:active { transform: translateY(4px); box-shadow: 0 1px 0 #a82a25; }
+button.secondary { background: #fff; color: #23324a; font-size: 16px; padding: 10px 24px; box-shadow: 0 3px 0 #b8c2d0; }
+#version {
+  position: absolute;
+  left: 8px;
+  bottom: calc(6px + env(safe-area-inset-bottom));
+  font-size: 11px;
+  color: rgba(35, 50, 74, 0.7);
+  pointer-events: none;
+}
