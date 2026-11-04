@@ -3,9 +3,9 @@ import { ANIMALS, BUS } from './pieces';
 export const BUS_INTERVAL = 10;
 export const PX_PER_METER = 50;
 
-/** Which piece comes as the n-th piece (1-based). Every 10th piece is the bus. */
+/** Which piece comes as the n-th piece (1-based). The bus comes first, then on every number ending in 0. */
 export function pieceIdForIndex(n: number, rand: () => number): string {
-  if (n > 0 && n % BUS_INTERVAL === 0) return BUS.id;
+  if (n === 1 || (n > 0 && n % BUS_INTERVAL === 0)) return BUS.id;
   const i = Math.min(ANIMALS.length - 1, Math.floor(rand() * ANIMALS.length));
   return ANIMALS[i].id;
 }

@@ -45,14 +45,32 @@ function toLogicalX(e: PointerEvent): number {
   return (e.clientX - r.left) / scale;
 }
 
+// Only the first finger moves the piece. Any further finger that touches the screen rotates it.
+let dragPointer: number | null = null;
 canvas.addEventListener('pointerdown', (e) => {
+  if (dragPointer !== null) {
+    game.rotate();
+    return;
+  }
+  dragPointer = e.pointerId;
   canvas.setPointerCapture(e.pointerId);
   game.pointerDown(toLogicalX(e));
 });
-canvas.addEventListener('pointermove', (e) => game.pointerMove(toLogicalX(e)));
-canvas.addEventListener('pointerup', () => game.pointerUp());
-canvas.addEventListener('pointercancel', () => game.pointerUp());
-rotateBtn.addEventListener('click', () => game.rotate());
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId === dragPointer) game.pointerMove(toLogicalX(e));
+});
+function endDrag(e: PointerEvent): void {
+  if (e.pointerId !== dragPointer) return;
+  dragPointer = null;
+  game.pointerUp();
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+// pointerdown (not click) so the button also works while another finger is on the screen.
+rotateBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  game.rotate();
+});
 
 function startGame(): void {
   titleEl.classList.add('hidden');
