@@ -1,7 +1,7 @@
 {
   "name": "bustour2026",
   "private": true,
-  "version": "0.0.01",
+  "version": "0.0.02",
   "type": "module",
   "scripts": {
     "dev": "vite",

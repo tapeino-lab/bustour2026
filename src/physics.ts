@@ -25,7 +25,8 @@ export interface PieceBody {
 }
 
 export function createEngine(): { engine: Matter.Engine; platform: Matter.Body } {
-  const engine = Engine.create({ gravity: { x: 0, y: 1, scale: 0.001 } });
+  // Sleeping stops the slow creep Matter.js bodies show on slopes, whatever the friction.
+  const engine = Engine.create({ gravity: { x: 0, y: 1, scale: 0.001 }, enableSleeping: true });
   const platform = Bodies.rectangle(
     WORLD_WIDTH / 2,
     GROUND_TOP + PLATFORM_DEPTH / 2,

@@ -29,6 +29,18 @@ describe('physics', () => {
     expect(p.body.bounds.max.y).toBeLessThan(GROUND_TOP + 2);
   });
 
+  it('does not keep creeping down a gentle slope', () => {
+    const { engine } = createEngine();
+    const a = (20 * Math.PI) / 180;
+    const ramp = Matter.Bodies.rectangle(0, 0, 600, 20, { isStatic: true, angle: a });
+    const box = Matter.Bodies.rectangle(Math.sin(a) * 31, -Math.cos(a) * 31, 60, 40, { angle: a });
+    Matter.Composite.add(engine.world, [ramp, box]);
+    for (let i = 0; i < 120; i++) Matter.Engine.update(engine, STEP);
+    const x = box.position.x;
+    for (let i = 0; i < 480; i++) Matter.Engine.update(engine, STEP);
+    expect(Math.abs(box.position.x - x)).toBeLessThan(1);
+  });
+
   it('detects a piece dropped beside the platform as fallen', () => {
     const { p } = dropAndRun('bear', 10, 120);
     expect(hasFallen(p.body)).toBe(true);

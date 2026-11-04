@@ -10,7 +10,9 @@ const { Body, Composite, Engine } = Matter;
 
 export const STEP_MS = 1000 / 60;
 const SPAWN_GAP = 50;
-const HUD_SPACE = 96;
+const HUD_SPACE = 100;
+/** Logical px between the platform top and the bottom of the screen at the start. */
+const GROUND_FROM_BOTTOM = 130;
 const OVER_DELAY_FRAMES = 70;
 const ROTATE_STEP = Math.PI / 4;
 
@@ -60,7 +62,7 @@ export class Game {
   }
 
   private baseCamTop(): number {
-    return GROUND_TOP - (this.viewH - 200);
+    return GROUND_TOP - (this.viewH - GROUND_FROM_BOTTOM);
   }
 
   start(): void {
@@ -86,7 +88,10 @@ export class Game {
     this.radius = boundingRadius(this.current);
     const top = towerTop(this.pieces.map((p) => p.body));
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
-    Body.setPosition(this.current.body, { x: this.aimX, y: top - SPAWN_GAP - this.radius });
+    // Spawn near the top of the screen (just under the HUD), and always above the tower.
+    const screenTopY = Math.min(this.baseCamTop(), this.camTop) + HUD_SPACE + this.radius;
+    const y = Math.min(top - SPAWN_GAP - this.radius, screenTopY);
+    Body.setPosition(this.current.body, { x: this.aimX, y });
     this.state = 'aim';
   }
 
