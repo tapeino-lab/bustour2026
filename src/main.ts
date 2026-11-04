@@ -30,6 +30,9 @@ showBest();
 function resize(): void {
   const h = window.innerHeight;
   const w = Math.min(window.innerWidth, Math.round(h * 0.62));
+  // Setting canvas.width/height clears the canvas, so skip resize events that change nothing.
+  const d = Math.min(window.devicePixelRatio || 1, 3);
+  if (canvas.width === Math.round(w * d) && canvas.height === Math.round(h * d)) return;
   app.style.width = `${w}px`;
   dpr = Math.min(window.devicePixelRatio || 1, 3);
   canvas.width = Math.round(w * dpr);
@@ -59,10 +62,16 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId === dragPointer) game.pointerMove(toLogicalX(e));
 });
+function isOverRotate(e: PointerEvent): boolean {
+  const r = rotateBtn.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
 function endDrag(e: PointerEvent): void {
   if (e.pointerId !== dragPointer) return;
   dragPointer = null;
-  game.pointerUp();
+  // Releasing over the rotate button cancels the drop.
+  if (e.type === 'pointercancel' || isOverRotate(e)) game.cancelDrag();
+  else game.pointerUp();
 }
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);

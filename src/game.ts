@@ -6,10 +6,13 @@ import {
 } from './physics';
 import { drawPreview, drawWorld, type FaceImages, type View } from './render';
 
-const { Body, Composite, Engine } = Matter;
+const { Body, Composite, Engine, Events } = Matter;
 
 export const STEP_MS = 1000 / 60;
-const SPAWN_GAP = 50;
+/** Gap between the tower top and the bottom of a newly spawned piece. */
+export const SPAWN_GAP = 70;
+/** Fall speed limit (px per step) for a dropped piece until it first touches something. */
+export const MAX_FALL_SPEED = 3;
 const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
 const GROUND_FROM_BOTTOM = 130;
@@ -47,13 +50,29 @@ export class Game {
   private dragging = false;
   private dragStartX = 0;
   private dragStartAim = 0;
+  /** The dropped piece while it is still in free fall. */
+  private freeFall: Matter.Body | null = null;
 
   constructor(
     private readonly rand: () => number = Math.random,
     private viewH = 640,
   ) {
-    this.engine = createEngine().engine;
+    this.engine = this.newEngine();
     this.camTop = this.baseCamTop();
+  }
+
+  private newEngine(): Matter.Engine {
+    const engine = createEngine().engine;
+    Events.on(engine, 'collisionStart', (e) => {
+      if (!this.freeFall) return;
+      for (const pair of e.pairs) {
+        if (pair.bodyA.parent === this.freeFall || pair.bodyB.parent === this.freeFall) {
+          this.freeFall = null;
+          return;
+        }
+      }
+    });
+    return engine;
   }
 
   setViewHeight(h: number): void {
@@ -67,7 +86,8 @@ export class Game {
 
   start(): void {
     Engine.clear(this.engine);
-    this.engine = createEngine().engine;
+    this.engine = this.newEngine();
+    this.freeFall = null;
     this.pieces = [];
     this.score = 0;
     this.count = 0;
@@ -88,10 +108,7 @@ export class Game {
     this.radius = boundingRadius(this.current);
     const top = towerTop(this.pieces.map((p) => p.body));
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
-    // Spawn near the top of the screen (just under the HUD), and always above the tower.
-    const screenTopY = Math.min(this.baseCamTop(), this.camTop) + HUD_SPACE + this.radius;
-    const y = Math.min(top - SPAWN_GAP - this.radius, screenTopY);
-    Body.setPosition(this.current.body, { x: this.aimX, y });
+    Body.setPosition(this.current.body, { x: this.aimX, y: top - SPAWN_GAP - this.radius });
     this.state = 'aim';
   }
 
@@ -122,6 +139,11 @@ export class Game {
     Body.setPosition(this.current.body, { x: this.aimX, y: this.current.body.position.y });
   }
 
+  /** Ends a drag without dropping (finger released over the rotate button). */
+  cancelDrag(): void {
+    this.dragging = false;
+  }
+
   pointerUp(): void {
     const wasDragging = this.dragging;
     this.dragging = false;
@@ -135,6 +157,7 @@ export class Game {
     Body.setAngularVelocity(p.body, 0);
     Composite.add(this.engine.world, p.body);
     this.pieces.push(p);
+    this.freeFall = p.body;
     this.current = null;
     this.settle.reset();
     this.state = 'drop';
@@ -145,6 +168,8 @@ export class Game {
       if (this.state === 'over') Engine.update(this.engine, STEP_MS);
       return;
     }
+    const ff = this.freeFall;
+    if (ff && ff.velocity.y > MAX_FALL_SPEED) Body.setVelocity(ff, { x: ff.velocity.x, y: MAX_FALL_SPEED });
     Engine.update(this.engine, STEP_MS);
 
     if (this.state === 'falling') {

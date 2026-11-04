@@ -103,31 +103,6 @@ function drawBackground(ctx: CanvasRenderingContext2D, view: View): void {
   sky.addColorStop(1, '#d8f0fb');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, WORLD_WIDTH, h);
-
-  // Distant mountain with a snowy cap, slow parallax.
-  const groundScreenY = GROUND_TOP - view.camTop;
-  const base = groundScreenY * 0.3 + h * 0.7 - 110;
-  const peakY = base - 210;
-  ctx.fillStyle = '#7d93b8';
-  ctx.beginPath();
-  ctx.moveTo(-40, base);
-  ctx.lineTo(150, peakY);
-  ctx.lineTo(210, peakY);
-  ctx.lineTo(400, base);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#f7fbff';
-  ctx.beginPath();
-  ctx.moveTo(150, peakY);
-  ctx.lineTo(210, peakY);
-  ctx.lineTo(244, peakY + 46);
-  ctx.lineTo(226, peakY + 38);
-  ctx.lineTo(206, peakY + 52);
-  ctx.lineTo(184, peakY + 40);
-  ctx.lineTo(162, peakY + 54);
-  ctx.lineTo(140, peakY + 34);
-  ctx.closePath();
-  ctx.fill();
 }
 
 function drawPlatform(ctx: CanvasRenderingContext2D, view: View): void {
@@ -162,19 +137,7 @@ export function drawWorld(
   drawPlatform(ctx, view);
   for (const p of pieces) drawPiece(ctx, p, faces);
 
-  if (aim) {
-    const x = aim.body.position.x;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(x, aim.body.bounds.max.y + 4);
-    ctx.lineTo(x, view.camTop + view.viewH);
-    ctx.stroke();
-    ctx.restore();
-    drawPiece(ctx, aim, faces);
-  }
+  if (aim) drawPiece(ctx, aim, faces);
 }
 
 /** Draws a piece scaled into a screen-space box (logical coordinates). */
