@@ -92,6 +92,11 @@ export class Game {
     this.state = 'aim';
   }
 
+  /** Bottom edge of the piece being aimed, in logical px from the top of the screen. */
+  get aimBottomOnScreen(): number | null {
+    return this.current ? this.current.bounds.maxY - this.camTop : null;
+  }
+
   get pieceNumber(): number {
     return this.count;
   }

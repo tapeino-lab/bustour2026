@@ -25,6 +25,19 @@ html, body {
   background: linear-gradient(#6ec3f0, #d8f0fb);
 }
 .hidden { display: none !important; }
+.tutorial {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 80px;
+  pointer-events: none;
+  display: none;
+  transform-origin: 22px 3px;
+}
+.tutorial.on { display: block; }
+.tutorial svg { display: block; opacity: 0.55; }
+.tutorial.paused { visibility: hidden; }
 #rotate {
   position: absolute;
   /* Wide bottom button; the right side is kept free for a later button. */

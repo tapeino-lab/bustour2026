@@ -4,6 +4,7 @@ import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { loadBest, saveBest } from './storage';
 import { fetchLatestVersion, reloadToVersion } from './update';
+import { Tutorial } from './tutorial';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -21,6 +22,23 @@ let best = loadBest();
 let scale = 1;
 let dpr = 1;
 
+const tutorial = new Tutorial(app);
+/** The finger tutorial runs only for the first piece after the page is opened. */
+let tutorialPending = true;
+
+function startTutorial(): void {
+  const bottom = game.aimBottomOnScreen;
+  if (bottom === null) return;
+  const a = app.getBoundingClientRect();
+  const b = rotateBtn.getBoundingClientRect();
+  const pieceBottom = bottom * scale;
+  const buttonTop = b.top - a.top;
+  tutorial.start({
+    tap: { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height / 2 },
+    swipe: { left: a.width * 0.25, right: a.width * 0.75, y: (pieceBottom + buttonTop) / 2 },
+  });
+}
+
 /** A newer published version found at game over; loaded when the player retries. */
 let pendingUpdate: string | null = null;
 
@@ -37,6 +55,7 @@ function resize(): void {
   canvas.height = Math.round(h * dpr);
   scale = w / WORLD_WIDTH;
   game.setViewHeight(h / scale);
+  if (tutorial.running) startTutorial();
 }
 window.addEventListener('resize', resize);
 resize();
@@ -49,6 +68,7 @@ function toLogicalX(e: PointerEvent): number {
 // Only the first finger moves the piece. Any further finger that touches the screen rotates it.
 let dragPointer: number | null = null;
 canvas.addEventListener('pointerdown', (e) => {
+  tutorial.setPaused(true);
   if (dragPointer !== null) {
     game.rotate();
     return;
@@ -67,6 +87,7 @@ function isOverRotate(e: PointerEvent): boolean {
 function endDrag(e: PointerEvent): void {
   if (e.pointerId !== dragPointer) return;
   dragPointer = null;
+  tutorial.setPaused(false);
   // Releasing over the rotate button cancels the drop.
   if (e.type === 'pointercancel' || isOverRotate(e)) game.cancelDrag();
   else game.pointerUp();
@@ -87,6 +108,10 @@ function startGame(): void {
   overEl.classList.add('hidden');
   rotateBtn.classList.remove('hidden');
   game.start();
+  if (tutorialPending) {
+    tutorialPending = false;
+    startTutorial();
+  }
 }
 
 game.onGameOver = (score) => {
@@ -118,6 +143,8 @@ function frame(now: number): void {
     acc -= STEP_MS;
   }
   game.render(ctx, scale, dpr, faces, acc / STEP_MS);
+  // The tutorial ends once the first piece has been dropped.
+  if (tutorial.running && game.state !== 'aim') tutorial.stop();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
