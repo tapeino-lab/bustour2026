@@ -44,11 +44,8 @@ button {
   width: 100%;
   height: 100%;
   touch-action: none;
-  /* Halftone dots over radiating rays over the sky. */
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1.6px, transparent 2px) 0 0 / 12px 12px,
-    repeating-conic-gradient(from 0deg at 50% 0%, rgba(255, 255, 255, 0.16) 0deg 6deg, transparent 6deg 14deg),
-    linear-gradient(#36b6ec, #9fe0fb);
+  /* The sky (rays, halftone) is drawn inside the opaque canvas. */
+  background: #36b6ec;
 }
 .hidden { display: none !important; }
 .tutorial {

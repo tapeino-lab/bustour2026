@@ -250,26 +250,23 @@ export class Game {
       ctx.lineWidth = 3;
       ctx.strokeRect(x, y, w, h);
     };
-    panel(10, 10, 150, 66);
+    panel(10, 10, 104, 70);
     panel(WORLD_WIDTH - 94, 10, 82, 76);
 
+    // Score: a big centred number, the height under it.
+    const cx = 10 + 104 / 2;
     ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    ctx.lineJoin = 'round';
-    ctx.font = `32px ${FONT}`;
-    const scoreText = `${this.score}`;
-    const scoreW = ctx.measureText(scoreText).width;
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = INK;
-    ctx.strokeText(scoreText, 20, 48);
-    ctx.fillStyle = '#ffd60a';
-    ctx.fillText(scoreText, 20, 48);
-    ctx.fillStyle = INK;
-    ctx.font = `15px ${FONT}`;
-    ctx.fillText('こ', 26 + scoreW, 48);
-    ctx.font = `12px ${FONT}`;
-    ctx.fillText(`たかさ ${this.heightM.toFixed(1)} m`, 20, 68);
     ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    ctx.font = `40px ${FONT}`;
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = INK;
+    ctx.strokeText(`${this.score}`, cx, 54);
+    ctx.fillStyle = '#ffd60a';
+    ctx.fillText(`${this.score}`, cx, 54);
+    ctx.fillStyle = INK;
+    ctx.font = `11px ${FONT}`;
+    ctx.fillText(`たかさ ${this.heightM.toFixed(1)}m`, cx, 72);
     ctx.font = `11px ${FONT}`;
     ctx.fillText('つぎ', WORLD_WIDTH - 53, 27);
 

@@ -1,5 +1,5 @@
 /** Every character the canvas draws with the comic font (web fonts load per character range). */
-export const CANVAS_TEXT = '0123456789.m こたかさつぎボフッ';
+export const CANVAS_TEXT = '0123456789.m たかさつぎボフッ';
 
 /**
  * Resolves once the comic font is ready for the canvas, or after `timeoutMs` (then the

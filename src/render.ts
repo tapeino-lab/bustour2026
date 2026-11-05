@@ -124,9 +124,56 @@ export function drawPiece(
   ctx.restore();
 }
 
-/** The sky is a CSS background on the canvas; here we only clear. */
+// The sky is pre-rendered once per screen size and copied each frame onto an opaque canvas.
+// (A transparent canvas redrawn every frame over a CSS background can flicker on iOS Safari.)
+let background: HTMLCanvasElement | null = null;
+
+/** Builds the comic sky (gradient, rays, halftone dots) for a canvas of w×h device pixels. */
+export function buildBackground(w: number, h: number, k: number): void {
+  const c = background ?? document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d')!;
+  g.setTransform(k, 0, 0, k, 0, 0);
+  const W = w / k;
+  const H = h / k;
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#36b6ec');
+  sky.addColorStop(1, '#9fe0fb');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, W, H);
+  // Rays from the top centre.
+  g.fillStyle = 'rgba(255, 255, 255, 0.16)';
+  const R = Math.hypot(W, H) * 1.2;
+  for (let a = 0; a < 360; a += 14) {
+    const a0 = (a * Math.PI) / 180;
+    const a1 = ((a + 6) * Math.PI) / 180;
+    g.beginPath();
+    g.moveTo(W / 2, 0);
+    g.lineTo(W / 2 + R * Math.cos(a0), R * Math.sin(a0));
+    g.lineTo(W / 2 + R * Math.cos(a1), R * Math.sin(a1));
+    g.closePath();
+    g.fill();
+  }
+  // Halftone dots.
+  g.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  g.beginPath();
+  for (let y = 6; y < H; y += 12) {
+    for (let x = 6; x < W; x += 12) {
+      g.moveTo(x + 1.6, y);
+      g.arc(x, y, 1.6, 0, Math.PI * 2);
+    }
+  }
+  g.fill();
+  background = c;
+}
+
 function drawBackground(ctx: CanvasRenderingContext2D): void {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (background) ctx.drawImage(background, 0, 0);
+  else {
+    ctx.fillStyle = '#36b6ec';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
 }
 
 /** The platform is just the green strip, drawn at exactly its physics size. */

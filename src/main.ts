@@ -2,6 +2,7 @@ import './style.css';
 import { loadFaces } from './faces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
+import { buildBackground } from './render';
 import { loadBest, saveBest } from './storage';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
@@ -11,7 +12,8 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 
 const app = $<HTMLDivElement>('app');
 const canvas = $<HTMLCanvasElement>('game');
-const ctx = canvas.getContext('2d')!;
+// Opaque canvas: the background is drawn into it (see buildBackground).
+const ctx = canvas.getContext('2d', { alpha: false })!;
 const rotateBtn = $<HTMLButtonElement>('rotate');
 const overEl = $('over');
 
@@ -57,6 +59,7 @@ function resize(): void {
   canvas.height = Math.round(h * dpr);
   scale = w / WORLD_WIDTH;
   game.setViewHeight(h / scale);
+  buildBackground(canvas.width, canvas.height, scale * dpr);
   // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
   game.render(ctx, scale, dpr, faces);
   if (tutorial.running) startTutorial();
