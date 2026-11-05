@@ -47,7 +47,8 @@ function startTutorial(): void {
 /** A newer published version found at game over; loaded when the player retries. */
 let pendingUpdate: string | null = null;
 
-const debug = new URLSearchParams(location.search).get('debug') === '1' ? new DebugOverlay(app) : null;
+// Diagnostics are on by default until release; ?debug=0 hides them.
+const debug = new URLSearchParams(location.search).get('debug') === '0' ? null : new DebugOverlay(app);
 /** Interpolation factor of the last frame, reused when a resize forces an extra draw. */
 let lastAlpha = 1;
 
