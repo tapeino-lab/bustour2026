@@ -16,10 +16,13 @@ const canvas = $<HTMLCanvasElement>('game');
 // Opaque canvas: the background is drawn into it (see buildBackground).
 // Rendering switches for diagnosing device-specific flicker (e.g. ?canvas=soft&dpr=1&interp=0):
 //  canvas=soft  ask for a CPU-backed canvas (willReadFrequently) instead of a GPU one
+//  canvas=gpu   force the GPU canvas
 //  dpr=N        cap the canvas resolution at N× (default 2)
 //  interp=0     draw the latest physics pose without smoothing between steps
 const params = new URLSearchParams(location.search);
-const SOFT_CANVAS = params.get('canvas') === 'soft';
+// Firefox's GPU canvas flickers (stale frames in the lower half) on Android; the CPU canvas does not.
+const IS_FIREFOX = /Firefox\//.test(navigator.userAgent);
+const SOFT_CANVAS = params.get('canvas') === 'soft' || (IS_FIREFOX && params.get('canvas') !== 'gpu');
 const DPR_CAP = Number(params.get('dpr')) > 0 ? Number(params.get('dpr')) : 2;
 const INTERPOLATE = params.get('interp') !== '0';
 const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: SOFT_CANVAS })!;
