@@ -5,6 +5,7 @@ import { WORLD_WIDTH } from './physics';
 import { loadBest, saveBest } from './storage';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
+import { waitForFont } from './fonts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -34,8 +35,8 @@ function startTutorial(): void {
   const pieceBottom = bottom * scale;
   const ground = game.groundOnScreen * scale;
   tutorial.start({
-    // A little above the button centre so the tilted hand stays on screen.
-    tap: { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height * 0.4 },
+    // Right part of the button, a little above its centre so the tilted hand stays on screen.
+    tap: { x: b.left - a.left + b.width * 0.8, y: b.top - a.top + b.height * 0.4 },
     swipe: { left: a.width * 0.25, right: a.width * 0.75, y: (pieceBottom + ground) / 2 },
   });
 }
@@ -132,7 +133,6 @@ game.onGameOver = (score) => {
 };
 
 $('retry').addEventListener('click', startGame);
-startGame();
 
 let last = performance.now();
 let acc = 0;
@@ -148,4 +148,10 @@ function frame(now: number): void {
   if (tutorial.running && game.state !== 'aim') tutorial.stop();
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+
+// Start only after the comic font is ready, so canvas text never shows a fallback font.
+void waitForFont('Dela Gothic One').then(() => {
+  startGame();
+  last = performance.now();
+  requestAnimationFrame(frame);
+});

@@ -1,15 +1,37 @@
+/* American-comic look: thick black outlines, flat bold colours, halftone dots, hard drop shadows.
+   One web font everywhere and no OS-specific glyphs, so Android and iOS render the same. */
+:root {
+  --ink: #111111;
+  --yellow: #ffd60a;
+  --red: #e63946;
+  --sky: #4cc3f0;
+  --comic-font: 'Dela Gothic One', sans-serif;
+}
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #23324a;
-  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-  color: #23324a;
+  background: var(--ink);
+  font-family: var(--comic-font);
+  font-weight: 400;
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   overscroll-behavior: none;
+}
+button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  font-family: var(--comic-font);
+  font-weight: 400;
+  color: var(--ink);
+  cursor: pointer;
 }
 #app {
   position: relative;
@@ -22,7 +44,11 @@ html, body {
   width: 100%;
   height: 100%;
   touch-action: none;
-  background: linear-gradient(#6ec3f0, #d8f0fb);
+  /* Halftone dots over radiating rays over the sky. */
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1.6px, transparent 2px) 0 0 / 12px 12px,
+    repeating-conic-gradient(from 0deg at 50% 0%, rgba(255, 255, 255, 0.16) 0deg 6deg, transparent 6deg 14deg),
+    linear-gradient(#36b6ec, #9fe0fb);
 }
 .hidden { display: none !important; }
 .tutorial {
@@ -38,25 +64,33 @@ html, body {
 .tutorial.on { display: block; }
 .tutorial svg { display: block; opacity: 0.6; }
 .tutorial.paused { visibility: hidden; }
+
+.comic-btn {
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--yellow);
+  box-shadow: 5px 5px 0 var(--ink);
+  touch-action: none;
+}
+.comic-btn:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--ink); }
+
 #rotate {
   position: absolute;
   /* Wide bottom button; the right side is kept free for a later button. */
   left: 19%;
   right: 19%;
-  bottom: calc(6px + env(safe-area-inset-bottom));
-  height: 64px;
-  border-radius: 18px;
-  border: 4px solid #fff;
-  background: #f28c28;
-  color: #fff;
-  font-family: inherit;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
   font-size: 26px;
-  font-weight: bold;
   line-height: 1;
-  box-shadow: 0 4px 0 #b9631a;
-  touch-action: none;
 }
-#rotate:active { transform: translateY(3px); box-shadow: 0 1px 0 #b9631a; }
+#rotate svg { width: 30px; height: 30px; flex: none; }
+
 .overlay {
   position: absolute;
   inset: 0;
@@ -64,57 +98,72 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   padding: 24px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(2px);
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.18) 1.6px, transparent 2px) 0 0 / 10px 10px,
+    rgba(255, 255, 255, 0.55);
 }
-h1 {
-  margin: 0 0 4px;
-  font-size: 30px;
-  line-height: 1.15;
-  color: #23324a;
+.burst {
+  position: relative;
+  width: 300px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(5px 5px 0 var(--ink));
 }
-h1 span {
-  display: inline-block;
-  font-size: 46px;
-  color: #e6403a;
-  text-shadow: 3px 3px 0 #fff;
+.burst::before, .burst::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0%, 59% 22%, 79% 6%, 74% 30%, 100% 24%, 82% 45%, 100% 60%, 76% 64%, 86% 92%, 62% 76%, 50% 100%, 40% 77%, 14% 94%, 24% 66%, 0% 62%, 18% 46%, 0% 26%, 26% 30%, 20% 5%, 41% 22%);
 }
-h2 { margin: 0; font-size: 30px; color: #e6403a; }
-.lead { margin: 0; font-size: 16px; font-weight: bold; line-height: 1.6; }
-.howto {
+.burst::before { background: var(--ink); }
+.burst::after { inset: 5px; background: var(--yellow); }
+.burst h2 {
+  position: relative;
+  z-index: 1;
   margin: 0;
-  padding: 10px 16px;
-  list-style: none;
-  font-size: 13px;
-  line-height: 1.8;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 12px;
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--red);
+  -webkit-text-stroke: 1.5px var(--ink);
+  transform: rotate(-4deg);
 }
-.result { margin: 0; font-size: 20px; }
-.result b { font-size: 52px; color: #23324a; }
-.best { margin: 0; font-size: 15px; }
-.newbest { margin: 0; font-weight: bold; color: #e6403a; }
-button.primary, button.secondary {
-  min-width: 200px;
+.panel {
+  padding: 12px 22px;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.result { margin: 0; font-size: 18px; }
+.result b {
+  font-size: 54px;
+  font-weight: 400;
+  color: var(--yellow);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+}
+.best { margin: 4px 0 0; font-size: 14px; }
+.best b { font-weight: 400; }
+.newbest { margin: 6px 0 0; font-size: 16px; color: var(--red); }
+#retry {
+  min-width: 210px;
   padding: 14px 28px;
-  border: none;
-  border-radius: 999px;
-  font-size: 20px;
-  font-weight: bold;
-  font-family: inherit;
-  touch-action: manipulation;
+  font-size: 22px;
+  line-height: 1;
+  background: var(--red);
+  color: #fff;
 }
-button.primary { background: #e6403a; color: #fff; box-shadow: 0 5px 0 #a82a25; }
-button.primary:active { transform: translateY(4px); box-shadow: 0 1px 0 #a82a25; }
-button.secondary { background: #fff; color: #23324a; font-size: 16px; padding: 10px 24px; box-shadow: 0 3px 0 #b8c2d0; }
 #version {
   position: absolute;
   left: 8px;
-  bottom: calc(6px + env(safe-area-inset-bottom));
-  font-size: 11px;
-  color: rgba(35, 50, 74, 0.7);
+  bottom: calc(4px + env(safe-area-inset-bottom));
+  font-family: var(--comic-font);
+  font-size: 10px;
+  color: rgba(17, 17, 17, 0.55);
   pointer-events: none;
 }

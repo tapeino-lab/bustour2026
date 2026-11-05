@@ -1,7 +1,7 @@
 import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, hasFallen, towerTop } from './physics';
-import { drawPreview, drawWorld, type FaceImages, type View } from './render';
+import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
 
 export const STEP_MS = 1000 / 60;
 /** Gap between the tower top and the bottom of a newly spawned piece. */
@@ -12,6 +12,10 @@ const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
 const GROUND_FROM_BOTTOM = 190;
 const OVER_DELAY_FRAMES = 70;
+/** A new piece pops out of a smoke cloud: it grows to full size over this many steps… */
+export const APPEAR_FRAMES = 24;
+/** …while the cloud lasts this long. */
+export const POOF_FRAMES = 36;
 const ROTATE_STEP = Math.PI / 4;
 
 export type GameState = 'idle' | 'aim' | 'drop' | 'falling' | 'over';
@@ -37,6 +41,9 @@ export class Game {
   private dragStartAim = 0;
   /** The dropped piece while it is still in free fall. */
   private freeFall: PieceBody | null = null;
+  /** Smoke cloud of the latest spawn (world position and size) and its age in steps. */
+  private poof: { x: number; y: number; size: number } | null = null;
+  private spawnAge = 0;
 
   constructor(
     private readonly rand: () => number = Math.random,
@@ -69,6 +76,7 @@ export class Game {
   start(): void {
     this.physics = this.newPhysics();
     this.freeFall = null;
+    this.poof = null;
     this.pieces = [];
     this.score = 0;
     this.count = 0;
@@ -89,6 +97,8 @@ export class Game {
     const top = towerTop(this.pieces);
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
     this.current.setPose(this.aimX, top - SPAWN_GAP - this.radius, 0);
+    this.poof = { x: this.current.x, y: this.current.y, size: Math.max(34, this.radius * 0.95) };
+    this.spawnAge = 0;
     this.state = 'aim';
   }
 
@@ -108,6 +118,21 @@ export class Game {
 
   get heightM(): number {
     return heightMeters(GROUND_TOP - towerTop(this.pieces));
+  }
+
+  /** Drawing scale of the piece being aimed: pops from small to a little big, then settles at 1. */
+  get appearScale(): number {
+    // Hidden in the smoke for a moment, then it pops out a little too big and settles.
+    const t = Math.min(1, this.spawnAge / APPEAR_FRAMES);
+    if (t >= 1) return 1;
+    const u = Math.max(0, (t - 0.2) / 0.8);
+    const ease = 1 - (1 - u) ** 3;
+    return 0.2 + 0.8 * ease + 0.22 * Math.sin(Math.PI * u);
+  }
+
+  /** 0 → 1 while the spawn smoke is showing, null when there is none. */
+  get poofProgress(): number | null {
+    return this.poof && this.spawnAge < POOF_FRAMES ? this.spawnAge / POOF_FRAMES : null;
   }
 
   rotate(): void {
@@ -153,6 +178,7 @@ export class Game {
   }
 
   step(): void {
+    if (this.state !== 'idle') this.spawnAge++;
     if (this.state === 'idle' || this.state === 'over') {
       if (this.state === 'over') this.stepPhysics();
       return;
@@ -203,32 +229,50 @@ export class Game {
   render(ctx: CanvasRenderingContext2D, scale: number, dpr: number, faces: FaceImages, alpha = 1): void {
     this.updateCamera();
     const view: View = { scale, dpr, viewH: this.viewH, camTop: this.camTop };
-    drawWorld(ctx, view, this.pieces, this.current, faces, alpha);
+    drawWorld(ctx, view, this.pieces, this.current, faces, alpha, this.current ? this.appearScale : 1);
     if (this.state === 'idle') return;
 
     const k = scale * dpr;
-    ctx.setTransform(k, 0, 0, k, 0, 0);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
-    ctx.beginPath();
-    ctx.roundRect(10, 10, 150, 64, 12);
-    ctx.roundRect(WORLD_WIDTH - 92, 10, 82, 74, 12);
-    ctx.fill();
+    const poofT = this.poofProgress;
+    if (this.poof && poofT !== null) {
+      ctx.setTransform(k, 0, 0, k, 0, -this.camTop * k);
+      drawPoof(ctx, this.poof.x, this.poof.y, this.poof.size, poofT);
+    }
 
-    ctx.fillStyle = '#23324a';
+    // Comic panels: white boxes with an ink border and a hard offset shadow.
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    const panel = (x: number, y: number, w: number, h: number) => {
+      ctx.fillStyle = INK;
+      ctx.fillRect(x + 4, y + 4, w, h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    };
+    panel(10, 10, 150, 66);
+    panel(WORLD_WIDTH - 94, 10, 82, 76);
+
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
-    ctx.font = 'bold 30px system-ui, sans-serif';
+    ctx.lineJoin = 'round';
+    ctx.font = `32px ${FONT}`;
     const scoreText = `${this.score}`;
     const scoreW = ctx.measureText(scoreText).width;
-    ctx.fillText(scoreText, 22, 46);
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillText('こ', 26 + scoreW, 46);
-    ctx.font = '13px system-ui, sans-serif';
-    ctx.fillText(`たかさ ${this.heightM.toFixed(1)} m`, 22, 65);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = INK;
+    ctx.strokeText(scoreText, 20, 48);
+    ctx.fillStyle = '#ffd60a';
+    ctx.fillText(scoreText, 20, 48);
+    ctx.fillStyle = INK;
+    ctx.font = `15px ${FONT}`;
+    ctx.fillText('こ', 26 + scoreW, 48);
+    ctx.font = `12px ${FONT}`;
+    ctx.fillText(`たかさ ${this.heightM.toFixed(1)} m`, 20, 68);
     ctx.textAlign = 'center';
-    ctx.font = 'bold 11px system-ui, sans-serif';
-    ctx.fillText('つぎ', WORLD_WIDTH - 51, 26);
+    ctx.font = `11px ${FONT}`;
+    ctx.fillText('つぎ', WORLD_WIDTH - 53, 27);
 
-    if (this.next) drawPreview(ctx, view, this.next, faces, WORLD_WIDTH - 51, 54, 50);
+    if (this.next) drawPreview(ctx, view, this.next, faces, WORLD_WIDTH - 53, 56, 50);
   }
 }

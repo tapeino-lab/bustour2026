@@ -3,19 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#6ec3f0" />
+    <meta name="theme-color" content="#36b6ec" />
     <title>やまなしバスタワー</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" />
   </head>
   <body>
     <div id="app">
       <canvas id="game"></canvas>
-      <button id="rotate" aria-label="かいてん">↻ かいてん</button>
+      <button id="rotate" class="comic-btn" aria-label="かいてん">
+        <svg viewBox="0 -2 34 34" aria-hidden="true">
+          <path d="M27 16 A11 11 0 1 1 15 5" fill="none" stroke="#111" stroke-width="4.5" stroke-linecap="round" />
+          <path d="M13 -1 L24 5 L13 11 Z" fill="#111" stroke="#111" stroke-width="1.5" stroke-linejoin="round" />
+        </svg>
+        <span>かいてん</span>
+      </button>
       <section id="over" class="overlay hidden">
-        <h2>おちちゃった！</h2>
-        <p class="result"><b id="over-score">0</b> こ つめた</p>
-        <p class="best" id="over-best-line">じこベスト <b id="over-best">0</b> こ</p>
-        <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
-        <button id="retry" class="primary">もういちど</button>
+        <div class="burst"><h2>おちちゃった！</h2></div>
+        <div class="panel">
+          <p class="result"><b id="over-score">0</b> こ つめた</p>
+          <p class="best" id="over-best-line">じこベスト <b id="over-best">0</b> こ</p>
+          <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
+        </div>
+        <button id="retry" class="comic-btn">もういちど</button>
       </section>
       <div id="version"></div>
     </div>

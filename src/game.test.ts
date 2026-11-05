@@ -76,3 +76,22 @@ describe('Game', () => {
     expect(g.pieces.length).toBe(0);
   });
 });
+
+describe('spawn effect', () => {
+  it('pops the new piece out of a smoke cloud', async () => {
+    const { APPEAR_FRAMES, POOF_FRAMES } = await import('./game');
+    const g = new Game(seeded(), 700);
+    g.start();
+    expect(g.appearScale).toBeLessThan(0.5);
+    expect(g.poofProgress).toBe(0);
+    let peak = 0;
+    for (let i = 0; i < APPEAR_FRAMES; i++) {
+      g.step();
+      peak = Math.max(peak, g.appearScale);
+    }
+    expect(peak).toBeGreaterThan(1);
+    expect(g.appearScale).toBe(1);
+    for (let i = APPEAR_FRAMES; i < POOF_FRAMES; i++) g.step();
+    expect(g.poofProgress).toBeNull();
+  });
+});

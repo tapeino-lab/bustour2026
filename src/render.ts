@@ -13,6 +13,11 @@ export interface View {
 
 export type FaceImages = Map<string, HTMLImageElement>;
 
+/** The one font used everywhere (also in CSS), so Android and iOS look the same. */
+export const FONT = '"Dela Gothic One", sans-serif';
+export const INK = '#111111';
+const OUTLINE = 3;
+
 // Paths are built once per shape and reused every frame (no per-frame allocation).
 const detailPaths = new Map<Shape, Path2D>();
 const partPaths = new Map<Shape, Path2D>();
@@ -53,13 +58,13 @@ function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#3a2a1e';
+  ctx.fillStyle = INK;
   for (const sx of [-1, 1]) {
     ctx.beginPath();
     ctx.arc(sx * r * 0.36, -r * 0.15, Math.max(1.2, r * 0.12), 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.strokeStyle = '#3a2a1e';
+  ctx.strokeStyle = INK;
   ctx.lineWidth = Math.max(1, r * 0.1);
   ctx.beginPath();
   ctx.arc(0, r * 0.1, r * 0.42, 0.15 * Math.PI, 0.85 * Math.PI);
@@ -67,19 +72,27 @@ function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
 }
 
 /** Draws a piece in world coordinates (the current transform must map world → screen). */
-export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: FaceImages, alpha = 1): void {
+export function drawPiece(
+  ctx: CanvasRenderingContext2D,
+  p: PieceBody,
+  faces: FaceImages,
+  alpha = 1,
+  scale = 1,
+): void {
   const pose = p.drawPose(alpha);
   ctx.save();
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.angle);
+  if (scale !== 1) ctx.scale(scale, scale);
+  // Comic ink: one thick outline around the whole silhouette (strokes first, fills on top),
+  // so the parts read as one body.
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(40, 30, 20, 0.45)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = OUTLINE * 2;
+  for (const part of p.def.parts) ctx.stroke(partPath(part));
   for (const part of p.def.parts) {
-    const path = partPath(part);
     ctx.fillStyle = part.color;
-    ctx.fill(path);
-    ctx.stroke(path);
+    ctx.fill(partPath(part));
   }
 
   for (const d of p.def.details ?? []) {
@@ -101,8 +114,8 @@ export function drawPiece(ctx: CanvasRenderingContext2D, p: PieceBody, faces: Fa
     } else {
       drawDummyFace(ctx, f.r);
     }
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(0, 0, f.r, 0, Math.PI * 2);
     ctx.stroke();
@@ -119,12 +132,79 @@ function drawBackground(ctx: CanvasRenderingContext2D): void {
 /** The platform is just the green strip, drawn at exactly its physics size. */
 function drawPlatform(ctx: CanvasRenderingContext2D): void {
   const left = (WORLD_WIDTH - PLATFORM_WIDTH) / 2;
-  ctx.fillStyle = '#5bb04a';
+  // Hard shadow, then the strip with an ink outline and a highlight line.
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.roundRect(left + 4, GROUND_TOP + 4, PLATFORM_WIDTH, PLATFORM_DEPTH, 4);
+  ctx.fill();
+  ctx.fillStyle = '#4fc23a';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = OUTLINE;
   ctx.beginPath();
   ctx.roundRect(left, GROUND_TOP, PLATFORM_WIDTH, PLATFORM_DEPTH, 4);
   ctx.fill();
-  ctx.fillStyle = '#4a9a3b';
-  ctx.fillRect(left + 2, GROUND_TOP + PLATFORM_DEPTH - 4, PLATFORM_WIDTH - 4, 2);
+  ctx.stroke();
+  ctx.fillStyle = '#a6ec7a';
+  ctx.fillRect(left + 6, GROUND_TOP + 3, PLATFORM_WIDTH - 12, 2);
+}
+
+/** Puffs around the spawn point, relative to the piece centre; deterministic so it looks the same each time. */
+const PUFFS: [number, number, number][] = [
+  [0, 0, 1], [0.9, -0.2, 0.75], [-0.85, -0.1, 0.8], [0.45, 0.75, 0.7], [-0.5, 0.7, 0.7],
+  [0.3, -0.85, 0.65], [-0.35, -0.8, 0.65], [1.05, 0.5, 0.5], [-1.05, 0.45, 0.5],
+];
+
+/**
+ * Comic smoke cloud ("ボフッ") at (x, y) in world coordinates. `t` runs 0 → 1.
+ * Puffs grow quickly, then shrink away (no transparency, so the ink outline stays clean).
+ */
+export function drawPoof(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, t: number): void {
+  if (t >= 1) return;
+  // Big and dense at first (it hides the piece), then the puffs drift apart and shrink away.
+  const grow = t < 0.12 ? t / 0.12 : 1 - ((t - 0.12) / 0.88) ** 0.8;
+  const spread = size * (0.3 + 0.7 * Math.min(1, t / 0.45));
+  const base = size * 0.62 * grow;
+  if (base > 0.5) {
+    ctx.save();
+    ctx.lineWidth = OUTLINE * 2;
+    ctx.strokeStyle = INK;
+    for (const pass of [0, 1]) {
+      ctx.fillStyle = pass === 0 ? INK : '#ffffff';
+      for (const [dx, dy, r] of PUFFS) {
+        ctx.beginPath();
+        ctx.arc(x + dx * spread, y + dy * spread, base * r, 0, Math.PI * 2);
+        if (pass === 0) ctx.stroke();
+        else ctx.fill();
+      }
+    }
+    // A little grey shading on each puff for depth.
+    ctx.fillStyle = '#d9dde3';
+    for (const [dx, dy, r] of PUFFS) {
+      ctx.beginPath();
+      ctx.arc(x + dx * spread + base * r * 0.25, y + dy * spread + base * r * 0.3, base * r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Sound-effect lettering.
+  const a = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+  const pop = t < 0.15 ? 0.6 + (t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (t - 0.15) * 0.5);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(x + size * 0.75, y - size * 0.75);
+  ctx.rotate(-0.18);
+  ctx.scale(pop, pop);
+  ctx.font = `22px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = INK;
+  ctx.strokeText('ボフッ', 0, 0);
+  ctx.fillStyle = '#ffd60a';
+  ctx.fillText('ボフッ', 0, 0);
+  ctx.restore();
 }
 
 export function drawWorld(
@@ -134,6 +214,7 @@ export function drawWorld(
   aim: PieceBody | null,
   faces: FaceImages,
   alpha = 1,
+  aimScale = 1,
 ): void {
   const k = view.scale * view.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -143,7 +224,7 @@ export function drawWorld(
   drawPlatform(ctx);
   for (const p of pieces) drawPiece(ctx, p, faces, alpha);
 
-  if (aim) drawPiece(ctx, aim, faces);
+  if (aim) drawPiece(ctx, aim, faces, 1, aimScale);
 }
 
 /** Draws a piece scaled into a screen-space box (logical coordinates). */
