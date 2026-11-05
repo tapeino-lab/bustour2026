@@ -7,6 +7,7 @@ import { loadBest, saveBest } from './storage';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
 import { waitForFont } from './fonts';
+import { DebugOverlay } from './debug';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -46,6 +47,15 @@ function startTutorial(): void {
 /** A newer published version found at game over; loaded when the player retries. */
 let pendingUpdate: string | null = null;
 
+const debug = new URLSearchParams(location.search).get('debug') === '1' ? new DebugOverlay(app) : null;
+/** Interpolation factor of the last frame, reused when a resize forces an extra draw. */
+let lastAlpha = 1;
+
+function draw(alpha: number): void {
+  game.render(ctx, scale, dpr, faces, alpha);
+  debug?.render();
+}
+
 function resize(): void {
   const h = window.innerHeight;
   const w = Math.min(window.innerWidth, Math.round(h * 0.62));
@@ -60,8 +70,10 @@ function resize(): void {
   scale = w / WORLD_WIDTH;
   game.setViewHeight(h / scale);
   buildBackground(canvas.width, canvas.height, scale * dpr);
+  debug?.resize(`${w}×${h}`);
   // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
-  game.render(ctx, scale, dpr, faces);
+  // Use the same interpolation as the last frame so the extra draw matches it exactly.
+  draw(lastAlpha);
   if (tutorial.running) startTutorial();
 }
 window.addEventListener('resize', resize);
@@ -145,13 +157,21 @@ $('retry').addEventListener('click', startGame);
 let last = performance.now();
 let acc = 0;
 function frame(now: number): void {
-  acc += Math.min(100, now - last);
+  const dt = now - last;
+  acc += Math.min(100, Math.max(0, dt));
   last = now;
+  let steps = 0;
   while (acc >= STEP_MS) {
     game.step();
     acc -= STEP_MS;
+    steps++;
   }
-  game.render(ctx, scale, dpr, faces, acc / STEP_MS);
+  lastAlpha = acc / STEP_MS;
+  draw(lastAlpha);
+  if (debug) {
+    debug.frame(dt, steps);
+    debug.update(`state ${game.state} pieces ${game.pieces.length} canvas ${canvas.width}×${canvas.height}`);
+  }
   // The tutorial ends once the first piece has been dropped.
   if (tutorial.running && game.state !== 'aim') tutorial.stop();
   requestAnimationFrame(frame);
