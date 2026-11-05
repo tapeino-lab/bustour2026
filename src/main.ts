@@ -1,11 +1,12 @@
 import './style.css';
 import { faces, fileToFaceJpeg, setFaces } from './faces';
-import type { Online } from './online';
+import type { Online, RankingKind, ScoreEntry } from './online';
 import { ANIMALS } from './pieces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { buildBackground } from './render';
-import { loadBest, saveBest } from './storage';
+import { loadBest, loadBestHeight, loadName, saveBest, saveBestHeight, saveName } from './storage';
+import { isValidName, normalizeName } from './names';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
 import { waitForFont } from './fonts';
@@ -35,6 +36,7 @@ $('version').textContent = `v${__APP_VERSION__}`;
 
 const game = new Game();
 let best = loadBest();
+let bestHeight = loadBestHeight();
 let scale = 1;
 let dpr = 1;
 
@@ -150,15 +152,23 @@ function startGame(): void {
   }
 }
 
-game.onGameOver = (score) => {
-  const isNew = score > best;
-  if (isNew) {
+game.onGameOver = (score, height) => {
+  const isNew = score > best || height > bestHeight;
+  if (score > best) {
     best = score;
     saveBest(best);
   }
-  $('over-best').textContent = String(best);
+  if (height > bestHeight) {
+    bestHeight = height;
+    saveBestHeight(bestHeight);
+  }
   $('over-score').textContent = String(score);
+  $('over-height').textContent = height.toFixed(1);
+  $('over-best').textContent = String(best);
+  $('over-best-height').textContent = bestHeight.toFixed(1);
   $('new-best').classList.toggle('hidden', !isNew);
+  $('ranking').classList.add('hidden');
+  if (online && member) void updateRanking(score, height);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
   $('open-join').classList.toggle('hidden', !online || member);
@@ -197,8 +207,123 @@ function showJoin(): void {
 
 async function becomeMember(): Promise<void> {
   member = true;
-  if (online) setFaces(await online.loadFaces());
+  if (!online) return;
+  setFaces(await online.loadFaces());
+  myEntry = await online.myScore().catch(() => null);
 }
+
+// ---- Rankings (members only) ------------------------------------------------------------------
+let myEntry: ScoreEntry | null = null;
+let rankingKind: RankingKind = 'height';
+const nameEl = $('name');
+const nameInput = $<HTMLInputElement>('name-input');
+let nameResolve: ((name: string | null) => void) | null = null;
+
+/** Asks for a three-letter hiragana name; null if the player chose not to register. */
+function askName(current: string): Promise<string | null> {
+  nameInput.value = current;
+  $('name-error').classList.add('hidden');
+  showOverlay(nameEl, true);
+  return new Promise((resolve) => (nameResolve = resolve));
+}
+function closeName(result: string | null): void {
+  showOverlay(nameEl, false);
+  nameResolve?.(result);
+  nameResolve = null;
+}
+$('name-ok').addEventListener('click', () => {
+  const name = normalizeName(nameInput.value);
+  if (!isValidName(name)) {
+    $('name-error').classList.remove('hidden');
+    return;
+  }
+  closeName(name);
+});
+nameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.isComposing) $('name-ok').click();
+});
+$('name-skip').addEventListener('click', () => closeName(null));
+
+async function saveEntry(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
+  if (!online) return;
+  await online.saveScore(entry);
+  myEntry = { uid: online.uid, ...entry };
+  saveName(entry.name);
+}
+
+/** After a game: register a new personal best (asking for a name the first time), then show the ranking. */
+async function updateRanking(score: number, height: number): Promise<void> {
+  if (!online) return;
+  try {
+    const improved = !myEntry || score > myEntry.count || height > myEntry.height;
+    if (improved) {
+      const name = myEntry?.name ?? (loadName() || (await askName('')));
+      if (name) {
+        await saveEntry({
+          name,
+          count: Math.max(score, myEntry?.count ?? 0),
+          height: Math.max(height, myEntry?.height ?? 0),
+        });
+      }
+    }
+  } catch {
+    // Saving failed (offline?): still show the ranking below.
+  }
+  await showRanking();
+}
+
+async function showRanking(): Promise<void> {
+  if (!online) return;
+  const list = $('ranking-list');
+  let rows: ScoreEntry[];
+  try {
+    rows = await online.ranking(rankingKind);
+  } catch {
+    return;
+  }
+  list.replaceChildren();
+  rows.forEach((r, i) => {
+    const li = document.createElement('li');
+    if (r.uid === online?.uid) li.className = 'me';
+    const rank = document.createElement('span');
+    rank.className = 'rank';
+    rank.textContent = `${i + 1}`;
+    const name = document.createElement('span');
+    name.textContent = r.name;
+    const val = document.createElement('span');
+    val.className = 'val';
+    val.textContent = rankingKind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
+    li.append(rank, name, val);
+    list.appendChild(li);
+  });
+  if (!rows.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'まだ だれも いないよ';
+    list.appendChild(li);
+  }
+  $('rename').classList.toggle('hidden', !myEntry);
+  $('ranking').classList.remove('hidden');
+}
+
+for (const tab of document.querySelectorAll<HTMLButtonElement>('.tab')) {
+  tab.addEventListener('click', () => {
+    rankingKind = tab.dataset.kind === 'count' ? 'count' : 'height';
+    for (const t of document.querySelectorAll('.tab')) t.classList.toggle('on', t === tab);
+    void showRanking();
+  });
+}
+$('rename').addEventListener('click', async () => {
+  if (!myEntry) return;
+  const name = await askName(myEntry.name);
+  if (!name || name === myEntry.name) return;
+  try {
+    await saveEntry({ name, count: myEntry.count, height: myEntry.height });
+  } catch {
+    return;
+  }
+  await showRanking();
+});
 
 $('join-ok').addEventListener('click', async () => {
   if (!online || !joinInput.value.trim()) return;

@@ -26,7 +26,10 @@ export class Game {
   pieces: PieceBody[] = [];
   current: PieceBody | null = null;
   next: PieceBody | null = null;
-  onGameOver: (score: number) => void = () => {};
+  /** Called once per game with the piece count and the highest settled tower (m). */
+  onGameOver: (score: number, height: number) => void = () => {};
+  /** Highest settled tower in this game, in metres. */
+  bestHeight = 0;
 
   private physics: Physics;
   private count = 0;
@@ -79,6 +82,7 @@ export class Game {
     this.poof = null;
     this.pieces = [];
     this.score = 0;
+    this.bestHeight = 0;
     this.count = 0;
     this.overFrames = 0;
     this.aimX = WORLD_WIDTH / 2;
@@ -188,7 +192,7 @@ export class Game {
     if (this.state === 'falling') {
       if (++this.overFrames >= OVER_DELAY_FRAMES) {
         this.state = 'over';
-        this.onGameOver(this.score);
+        this.onGameOver(this.score, this.bestHeight);
       }
       return;
     }
@@ -205,6 +209,7 @@ export class Game {
       const motions = this.pieces.map((p) => ({ speed: p.speed, angularSpeed: p.angularSpeed }));
       if (this.settle.update(motions)) {
         this.score = this.pieces.length;
+        this.bestHeight = Math.max(this.bestHeight, this.heightM);
         this.spawn();
       }
     }

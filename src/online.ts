@@ -3,8 +3,8 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
-  collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, serverTimestamp, setDoc,
-  type Firestore,
+  collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
+  serverTimestamp, setDoc, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 
@@ -18,6 +18,16 @@ export function firebaseOptions(env: Record<string, string | undefined>): Fireba
   };
   return o.apiKey && o.authDomain && o.projectId && o.appId ? (o as FirebaseOptions) : null;
 }
+
+export interface ScoreEntry {
+  uid: string;
+  name: string;
+  count: number;
+  height: number;
+}
+
+export type RankingKind = 'height' | 'count';
+export const RANKING_SIZE = 20;
 
 export class Online {
   private constructor(
@@ -81,5 +91,22 @@ export class Online {
 
   async saveFace(pieceId: string, image: string): Promise<void> {
     await setDoc(doc(this.db, 'faces', pieceId), { image, updatedAt: serverTimestamp() });
+  }
+
+  /** This device's ranking entry, or null if it has none yet. */
+  async myScore(): Promise<ScoreEntry | null> {
+    const d = await getDoc(doc(this.db, 'scores', this.uid));
+    return d.exists() ? { uid: this.uid, ...(d.data() as Omit<ScoreEntry, 'uid'>) } : null;
+  }
+
+  /** Saves the entry (the caller keeps count/height at their personal bests). */
+  async saveScore(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
+    await setDoc(doc(this.db, 'scores', this.uid), { ...entry, updatedAt: serverTimestamp() });
+  }
+
+  /** Top entries for one ranking, best first. */
+  async ranking(kind: RankingKind): Promise<ScoreEntry[]> {
+    const snap = await getDocs(query(collection(this.db, 'scores'), orderBy(kind, 'desc'), limit(RANKING_SIZE)));
+    return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<ScoreEntry, 'uid'>) }));
   }
 }

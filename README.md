@@ -40,4 +40,11 @@ main に push すると GitHub Actions（.github/workflows/deploy.yml）で GitH
 - Firebase の設定値は GitHub Secrets（`FIREBASE_API_KEY` / `FIREBASE_AUTH_DOMAIN` / `FIREBASE_PROJECT_ID` / `FIREBASE_APP_ID`）からビルド時に渡します。未設定ならダミーの顔で動きます。
 - ローカルでエミュレーターを使う場合は `VITE_FIREBASE_EMULATOR=1` と各 `VITE_FIREBASE_*` を付けて `npm run dev`。
 
+## ランキング（メンバーのみ）
+
+- 「たかさ」（積み上がって止まった最高の高さ）と「こすう」（積めた数）の2つ。上位20人をゲームオーバー画面に表示。
+- `scores/{uid}` に 1端末1件（名前・最高個数・最高高さ）。自己ベストを超えたときだけ更新でき、下がる書き込みはルールで拒否。
+- 名前はひらがな3文字（ー可）。カタカナや半角カナは自動でひらがなに直す。チェックは画面と Firestore ルールの両方。
+- 初めて自己ベストを出したときに名前を聞く。「なまえを かえる」で変更可。
+
 どうぶつの ID は `src/pieces.ts` を参照。

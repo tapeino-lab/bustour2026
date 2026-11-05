@@ -118,8 +118,9 @@ button {
 }
 .burst {
   position: relative;
-  width: 300px;
-  height: 150px;
+  width: 260px;
+  height: 110px;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +153,7 @@ button {
 }
 .result { margin: 0; font-size: 18px; }
 .result b {
-  font-size: 54px;
+  font-size: 44px;
   font-weight: 400;
   color: var(--yellow);
   -webkit-text-stroke: 2px var(--ink);
@@ -210,3 +211,32 @@ button {
 #admin-list img, #admin-list .noface { width: 44px; height: 44px; border: 2px solid var(--ink); border-radius: 50%; object-fit: cover; background: #ffe3c4; flex: none; }
 #admin-list label { margin-left: auto; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--yellow); font-size: 12px; }
 #admin-list input { display: none; }
+
+#over { gap: 10px; padding: 16px; justify-content: flex-start; padding-top: max(16px, 4vh); }
+#over > .panel { padding: 8px 18px; }
+.ranking { width: min(330px, 94%); padding: 8px 12px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
+.tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
+.tab {
+  padding: 6px 18px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1;
+}
+.tab.on { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+#ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 34vh;
+  text-align: left;
+  font-size: 15px;
+}
+#ranking-list li { display: flex; gap: 10px; align-items: baseline; padding: 3px 6px; border-bottom: 2px solid #eee; }
+#ranking-list li.me { background: #fff4b8; }
+#ranking-list .rank { width: 2.2em; text-align: right; }
+#ranking-list .val { margin-left: auto; }
+#ranking-list .empty { justify-content: center; color: #666; font-size: 13px; }
+.link { margin-top: 6px; padding: 4px; border: none; background: none; font-size: 12px; text-decoration: underline; }

@@ -4,7 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import {
   assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, serverTimestamp, setDoc } from 'firebase/firestore';
+import {
+  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc,
+} from 'firebase/firestore';
 
 const CODE = 'yamanashi-2026';
 const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
@@ -25,6 +27,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'admins/admin1'), {});
     await setDoc(doc(db, 'members/member1'), { code: CODE, joinedAt: new Date() });
     await setDoc(doc(db, 'faces/cat'), { image: JPEG, updatedAt: new Date() });
+    await setDoc(doc(db, 'members/member2'), { code: CODE, joinedAt: new Date() });
+    await setDoc(doc(db, 'scores/member2'), { name: 'ばすた', count: 5, height: 2.5, updatedAt: new Date() });
   });
 });
 
@@ -81,5 +85,39 @@ describe('admins', () => {
     await assertFails(getDoc(doc(as('u1'), 'admins/admin1')));
     await assertFails(setDoc(doc(as('u1'), 'admins/u1'), {}));
     await assertFails(setDoc(doc(as('admin1'), 'admins/u1'), {}));
+  });
+});
+
+describe('scores', () => {
+  const score = (name: string, count: number, height: number) => ({ name, count, height, updatedAt: serverTimestamp() });
+  it('members can create their own entry with a 3-letter hiragana name', async () => {
+    await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), score('やまな', 3, 1.2)));
+    await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), score('ばすー', 3, 1.2)));
+  });
+  it('rejects bad names', async () => {
+    for (const name of ['やま', 'やまなし', 'ヤマナ', 'abc', 'や ま', '']) {
+      await assertFails(setDoc(doc(as('member1'), 'scores/member1'), score(name, 3, 1.2)));
+    }
+  });
+  it('rejects bad numbers, extra fields, other uids and non-members', async () => {
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), score('やまな', -1, 1.2)));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), score('やまな', 2.5, 1.2)));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), score('やまな', 3, 5000)));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 3, 1), x: 1 }));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member2'), score('やまな', 30, 9)));
+    await assertFails(setDoc(doc(as('stranger'), 'scores/stranger'), score('やまな', 3, 1.2)));
+  });
+  it('lets bests only go up', async () => {
+    await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('ばすた', 6, 2.5)));
+    await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.1)));
+    await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 5, 3.1)));
+    await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.0)));
+    await assertFails(deleteDoc(doc(as('member2'), 'scores/member2')));
+  });
+  it('rankings are readable by members only', async () => {
+    const top = (uid: string) => getDocs(query(collection(as(uid), 'scores'), orderBy('height', 'desc'), limit(20)));
+    await assertSucceeds(top('member1'));
+    await assertSucceeds(top('admin1'));
+    await assertFails(top('stranger'));
   });
 });

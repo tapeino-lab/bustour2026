@@ -22,9 +22,17 @@
       <section id="over" class="overlay hidden">
         <div class="burst"><h2>おちた！</h2></div>
         <div class="panel">
-          <p class="result"><b id="over-score">0</b> こ つめた</p>
-          <p class="best" id="over-best-line">じこベスト <b id="over-best">0</b> こ</p>
+          <p class="result"><b id="over-score">0</b> こ　<b id="over-height">0.0</b> m</p>
+          <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
+        </div>
+        <div id="ranking" class="panel ranking hidden">
+          <div class="tabs">
+            <button class="tab on" data-kind="height">たかさ</button>
+            <button class="tab" data-kind="count">こすう</button>
+          </div>
+          <ol id="ranking-list"></ol>
+          <button id="rename" class="link hidden">なまえを かえる</button>
         </div>
         <button id="retry" class="comic-btn">もういちど</button>
         <button id="open-join" class="comic-btn sub hidden">さんかコードを いれる</button>
@@ -38,6 +46,18 @@
           <div class="row">
             <button id="join-ok" class="comic-btn">はいる</button>
             <button id="join-later" class="comic-btn sub">あとで</button>
+          </div>
+        </div>
+      </section>
+      <section id="name" class="overlay hidden">
+        <div class="panel join">
+          <h3>ランキングに のせる なまえ</h3>
+          <p class="small">ひらがな 3もじ</p>
+          <input id="name-input" type="text" inputmode="text" maxlength="8" autocomplete="off" autocorrect="off" spellcheck="false" />
+          <p id="name-error" class="error hidden">ひらがな 3もじで いれてね</p>
+          <div class="row">
+            <button id="name-ok" class="comic-btn">けってい</button>
+            <button id="name-skip" class="comic-btn sub">のせない</button>
           </div>
         </div>
       </section>

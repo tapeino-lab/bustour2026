@@ -95,3 +95,24 @@ describe('spawn effect', () => {
     expect(g.poofProgress).toBeNull();
   });
 });
+
+describe('best height', () => {
+  it('records the highest settled tower and reports it at game over', () => {
+    const g = new Game(seeded(), 700);
+    let reported: [number, number] | null = null;
+    g.onGameOver = (s, h) => (reported = [s, h]);
+    g.start();
+    g.drop();
+    for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
+    expect(g.bestHeight).toBeGreaterThan(0);
+    expect(g.bestHeight).toBe(g.heightM);
+    const settled = g.bestHeight;
+    // Drop the next piece off the platform to end the game.
+    g.pointerDown(180);
+    g.pointerMove(180 - 175);
+    g.pointerUp();
+    for (let i = 0; i < 2000 && g.state !== 'over'; i++) g.step();
+    expect(g.state).toBe('over');
+    expect(reported).toEqual([1, settled]);
+  });
+});
