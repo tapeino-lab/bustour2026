@@ -14,7 +14,15 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const app = $<HTMLDivElement>('app');
 const canvas = $<HTMLCanvasElement>('game');
 // Opaque canvas: the background is drawn into it (see buildBackground).
-const ctx = canvas.getContext('2d', { alpha: false })!;
+// Rendering switches for diagnosing device-specific flicker (e.g. ?canvas=soft&dpr=1&interp=0):
+//  canvas=soft  ask for a CPU-backed canvas (willReadFrequently) instead of a GPU one
+//  dpr=N        cap the canvas resolution at N× (default 2)
+//  interp=0     draw the latest physics pose without smoothing between steps
+const params = new URLSearchParams(location.search);
+const SOFT_CANVAS = params.get('canvas') === 'soft';
+const DPR_CAP = Number(params.get('dpr')) > 0 ? Number(params.get('dpr')) : 2;
+const INTERPOLATE = params.get('interp') !== '0';
+const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: SOFT_CANVAS })!;
 const rotateBtn = $<HTMLButtonElement>('rotate');
 const overEl = $('over');
 
@@ -48,7 +56,8 @@ function startTutorial(): void {
 let pendingUpdate: string | null = null;
 
 // Diagnostics are on by default until release; ?debug=0 hides them.
-const debug = new URLSearchParams(location.search).get('debug') === '0' ? null : new DebugOverlay(app);
+const debug = params.get('debug') === '0' ? null : new DebugOverlay(app);
+const BROWSER = /Firefox\/(\d+)/.exec(navigator.userAgent)?.[0] ?? /Chrome\/(\d+)/.exec(navigator.userAgent)?.[0] ?? 'other';
 /** Interpolation factor of the last frame, reused when a resize forces an extra draw. */
 let lastAlpha = 1;
 
@@ -62,7 +71,7 @@ function resize(): void {
   const w = Math.min(window.innerWidth, Math.round(h * 0.62));
   // Setting canvas.width/height clears the canvas, so skip resize events that change nothing.
   // Capped at 2: a 3x canvas costs over twice the pixels for little visible gain.
-  const d = Math.min(window.devicePixelRatio || 1, 2);
+  const d = Math.min(window.devicePixelRatio || 1, DPR_CAP);
   if (canvas.width === Math.round(w * d) && canvas.height === Math.round(h * d)) return;
   app.style.width = `${w}px`;
   dpr = d;
@@ -167,11 +176,14 @@ function frame(now: number): void {
     acc -= STEP_MS;
     steps++;
   }
-  lastAlpha = acc / STEP_MS;
+  lastAlpha = INTERPOLATE ? acc / STEP_MS : 1;
   draw(lastAlpha);
   if (debug) {
     debug.frame(dt, steps);
-    debug.update(`state ${game.state} pieces ${game.pieces.length} canvas ${canvas.width}×${canvas.height}`);
+    debug.update(
+      `state ${game.state} pieces ${game.pieces.length} canvas ${canvas.width}×${canvas.height}\n` +
+        `mode canvas=${SOFT_CANVAS ? 'soft' : 'gpu'} dpr≤${DPR_CAP} interp=${INTERPOLATE ? 1 : 0}  ${BROWSER}`,
+    );
   }
   // The tutorial ends once the first piece has been dropped.
   if (tutorial.running && game.state !== 'aim') tutorial.stop();
