@@ -1,17 +1,19 @@
 {
   "name": "bustour2026",
   "private": true,
-  "version": "0.0.18",
+  "version": "0.0.19",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:rules": "npx -y firebase-tools@14 emulators:exec --only firestore --project demo-bustour \"vitest run --config vitest.rules.config.ts\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
@@ -21,6 +23,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "firebase": "^12.19.0",
     "planck": "^1.4.2"
   }
 }

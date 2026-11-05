@@ -1,5 +1,7 @@
 import './style.css';
-import { loadFaces } from './faces';
+import { faces, fileToFaceJpeg, setFaces } from './faces';
+import type { Online } from './online';
+import { ANIMALS } from './pieces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { buildBackground } from './render';
@@ -31,7 +33,6 @@ const overEl = $('over');
 
 $('version').textContent = `v${__APP_VERSION__}`;
 
-const faces = loadFaces();
 const game = new Game();
 let best = loadBest();
 let scale = 1;
@@ -160,12 +161,136 @@ game.onGameOver = (score) => {
   $('new-best').classList.toggle('hidden', !isNew);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
+  $('open-join').classList.toggle('hidden', !online || member);
   void fetchLatestVersion().then((v) => {
     if (v && v !== __APP_VERSION__) pendingUpdate = v;
   });
 };
 
 $('retry').addEventListener('click', startGame);
+
+// ---- Online: join code, face photos, admin upload -------------------------------------------
+let online: Online | null = null;
+let member = false;
+const JOIN_LATER_KEY = 'bustour2026.joinLater';
+const joinEl = $('join');
+const joinInput = $<HTMLInputElement>('join-code');
+
+function joinLater(): boolean {
+  try {
+    return localStorage.getItem(JOIN_LATER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function showOverlay(el: HTMLElement, show: boolean): void {
+  el.classList.toggle('hidden', !show);
+  tutorial.setPaused(show);
+}
+
+function showJoin(): void {
+  $('join-error').classList.add('hidden');
+  joinInput.value = '';
+  showOverlay(joinEl, true);
+}
+
+async function becomeMember(): Promise<void> {
+  member = true;
+  if (online) setFaces(await online.loadFaces());
+}
+
+$('join-ok').addEventListener('click', async () => {
+  if (!online || !joinInput.value.trim()) return;
+  const ok = await online.join(joinInput.value);
+  if (!ok) {
+    $('join-error').classList.remove('hidden');
+    return;
+  }
+  showOverlay(joinEl, false);
+  $('open-join').classList.add('hidden');
+  await becomeMember();
+});
+joinInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('join-ok').click();
+});
+$('join-later').addEventListener('click', () => {
+  try {
+    localStorage.setItem(JOIN_LATER_KEY, '1');
+  } catch {
+    // Without storage the question simply comes back next time.
+  }
+  showOverlay(joinEl, false);
+});
+$('open-join').addEventListener('click', showJoin);
+
+async function showAdmin(): Promise<void> {
+  if (!online) return;
+  const o = online;
+  const adminEl = $('admin');
+  $('admin-uid').textContent = o.uid;
+  const admin = await o.isAdmin().catch(() => false);
+  $('admin-status').textContent = admin
+    ? 'どうぶつを えらんで しゃしんを とうろく（まんなかを せいほうけいに きりとります）'
+    : 'まだ かんりしゃでは ありません。上の ID を Firestore の admins に とうろくしてね';
+  const list = $('admin-list');
+  list.replaceChildren();
+  if (admin) {
+    const current = await o.loadFaces();
+    for (const a of ANIMALS) {
+      const li = document.createElement('li');
+      const pic = document.createElement('img');
+      pic.alt = '';
+      const src = current.get(a.id);
+      if (src) pic.src = src;
+      else pic.className = 'noface';
+      const name = document.createElement('span');
+      name.textContent = a.name;
+      const label = document.createElement('label');
+      label.textContent = 'しゃしん';
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        label.textContent = 'ほぞんちゅう…';
+        try {
+          const jpeg = await fileToFaceJpeg(file);
+          await o.saveFace(a.id, jpeg);
+          pic.src = jpeg;
+          pic.className = '';
+          setFaces(new Map([[a.id, jpeg]]));
+          label.textContent = 'かえる';
+        } catch {
+          label.textContent = 'しっぱい';
+        }
+        input.value = '';
+      });
+      label.appendChild(input);
+      li.append(pic, name, label);
+      list.appendChild(li);
+    }
+  }
+  showOverlay(adminEl, true);
+}
+$('admin-close').addEventListener('click', () => showOverlay($('admin'), false));
+
+async function initOnline(): Promise<void> {
+  // Without Firebase settings the game runs offline with dummy faces (and skips the download).
+  if (!import.meta.env.VITE_FIREBASE_API_KEY) return;
+  try {
+    const { Online } = await import('./online');
+    online = await Online.connect();
+  } catch {
+    online = null;
+  }
+  if (!online) return;
+  member = await online.isMember().catch(() => false);
+  if (member) await becomeMember().catch(() => undefined);
+  else if (!joinLater()) showJoin();
+  if (params.get('admin') === '1') await showAdmin().catch(() => undefined);
+}
 
 let last = performance.now();
 let acc = 0;
@@ -185,7 +310,8 @@ function frame(now: number): void {
     debug.frame(dt, steps);
     debug.update(
       `state ${game.state} pieces ${game.pieces.length} canvas ${canvas.width}×${canvas.height}\n` +
-        `mode canvas=${SOFT_CANVAS ? 'soft' : 'gpu'} dpr≤${DPR_CAP} interp=${INTERPOLATE ? 1 : 0}  ${BROWSER}`,
+        `mode canvas=${SOFT_CANVAS ? 'soft' : 'gpu'} dpr≤${DPR_CAP} interp=${INTERPOLATE ? 1 : 0}  ${BROWSER}\n` +
+        `net ${online ? (member ? 'member' : 'guest') : 'off'} faces ${faces.size}`,
     );
   }
   // The tutorial ends once the first piece has been dropped.
@@ -196,6 +322,7 @@ function frame(now: number): void {
 // Start only after the comic font is ready, so canvas text never shows a fallback font.
 void waitForFont('Dela Gothic One').then(() => {
   startGame();
+  void initOnline();
   last = performance.now();
   requestAnimationFrame(frame);
 });

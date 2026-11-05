@@ -27,6 +27,28 @@
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
         </div>
         <button id="retry" class="comic-btn">もういちど</button>
+        <button id="open-join" class="comic-btn sub hidden">さんかコードを いれる</button>
+      </section>
+      <section id="join" class="overlay hidden">
+        <div class="panel join">
+          <h3>さんかコード</h3>
+          <p class="small">コードを いれると みんなの かおが でるよ</p>
+          <input id="join-code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <p id="join-error" class="error hidden">コードが ちがうよ</p>
+          <div class="row">
+            <button id="join-ok" class="comic-btn">はいる</button>
+            <button id="join-later" class="comic-btn sub">あとで</button>
+          </div>
+        </div>
+      </section>
+      <section id="admin" class="overlay hidden">
+        <div class="panel admin">
+          <h3>かお とうろく</h3>
+          <p class="small">この たんまつの ID: <code id="admin-uid"></code></p>
+          <p id="admin-status" class="small"></p>
+          <ul id="admin-list"></ul>
+          <button id="admin-close" class="comic-btn sub">とじる</button>
+        </div>
       </section>
       <div id="version"></div>
     </div>

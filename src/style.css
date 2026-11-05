@@ -59,7 +59,7 @@ button {
   font: 10px/1.35 monospace;
   white-space: pre-wrap;
   pointer-events: none;
-  z-index: 10;
+  z-index: 1;
 }
 .tutorial {
   position: absolute;
@@ -104,6 +104,7 @@ button {
 .overlay {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -177,3 +178,35 @@ button {
   color: rgba(17, 17, 17, 0.55);
   pointer-events: none;
 }
+
+.comic-btn.sub {
+  padding: 10px 20px;
+  font-size: 15px;
+  line-height: 1;
+  background: #fff;
+}
+.panel h3 { margin: 0 0 6px; font-size: 22px; font-weight: 400; }
+.small { margin: 4px 0; font-size: 12px; line-height: 1.5; }
+.join { width: min(320px, 90%); }
+.join input {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  font-family: var(--comic-font);
+  font-size: 20px;
+  text-align: center;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.error { margin: 4px 0; font-size: 14px; color: var(--red); }
+.row { display: flex; gap: 12px; justify-content: center; margin-top: 10px; }
+#join-ok { padding: 10px 24px; font-size: 18px; line-height: 1; background: var(--red); color: #fff; }
+.admin { width: min(360px, 94%); max-height: 90%; display: flex; flex-direction: column; }
+.admin code { font-family: monospace; font-size: 11px; -webkit-user-select: all; user-select: all; word-break: break-all; }
+#admin-list { list-style: none; margin: 8px 0; padding: 0; overflow-y: auto; text-align: left; }
+#admin-list li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 2px solid #eee; font-size: 14px; }
+#admin-list img, #admin-list .noface { width: 44px; height: 44px; border: 2px solid var(--ink); border-radius: 50%; object-fit: cover; background: #ffe3c4; flex: none; }
+#admin-list label { margin-left: auto; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--yellow); font-size: 12px; }
+#admin-list input { display: none; }

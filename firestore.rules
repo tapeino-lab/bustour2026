@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Access rules for the Firestore database.
+// Paste this whole file into Firebase console → Firestore Database → Rules, then press Publish.
+//
+//   config/join      { code: "<join code>" }   set in the console only; nobody can read it
+//   admins/{uid}     {}                        set in the console only; who can upload faces
+//   members/{uid}    { code, joinedAt }        created by a device that entered the right code
+//   faces/{pieceId}  { image, updatedAt }      face photo (JPEG data URL), members only
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isMember() {
+      return signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // The join code itself is never readable by any client.
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
+    // A device may only check whether it is an admin.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // A device becomes a member by writing its own doc with the correct join code.
+    // Members can be removed (and codes changed) only in the console.
+    match /members/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['code', 'joinedAt'])
+        && request.resource.data.code is string
+        && request.resource.data.code == get(/databases/$(database)/documents/config/join).data.code
+        && request.resource.data.joinedAt == request.time;
+      allow list, update, delete: if false;
+    }
+
+    // Face photos: readable by members (and admins), writable by admins only.
+    match /faces/{pieceId} {
+      allow read: if isMember() || isAdmin();
+      allow create, update: if isAdmin()
+        && pieceId.matches('^[a-z]{2,20}$')
+        && request.resource.data.keys().hasOnly(['image', 'updatedAt'])
+        && request.resource.data.image is string
+        && request.resource.data.image.size() < 200000
+        && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+  }
+}
