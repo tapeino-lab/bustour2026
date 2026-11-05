@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Box, Vec2 } from 'planck';
 import { SettleTracker } from './logic';
 import { ALL_PIECES, type PieceDef } from './pieces';
-import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, hasFallen } from './physics';
+import { GROUND_TOP, PIECE_OUTLINE, PLATFORM_OUTLINE, PieceBody, Physics, WORLD_WIDTH, hasFallen } from './physics';
 
 const PX = 30;
 
@@ -63,5 +63,20 @@ describe('physics', () => {
     physics.add(p);
     for (let i = 0; i < 600; i++) physics.step();
     expect(hasFallen(p)).toBe(falls);
+  });
+
+  it('rests so that the drawn outlines just touch (no visible overlap or gap)', () => {
+    const physics = new Physics();
+    const lower = new PieceBody(block, WORLD_WIDTH / 2, GROUND_TOP - 40);
+    const upper = new PieceBody(block, WORLD_WIDTH / 2, GROUND_TOP - 100);
+    physics.add(lower);
+    physics.add(upper);
+    for (let i = 0; i < 600; i++) physics.step();
+    // Outline bottom of the lower block vs the outline top of the platform.
+    const groundGap = GROUND_TOP - PLATFORM_OUTLINE - (lower.bounds.maxY + PIECE_OUTLINE);
+    // Outline bottom of the upper block vs the outline top of the lower block.
+    const stackGap = lower.bounds.minY - PIECE_OUTLINE - (upper.bounds.maxY + PIECE_OUTLINE);
+    expect(Math.abs(groundGap)).toBeLessThan(0.6);
+    expect(Math.abs(stackGap)).toBeLessThan(0.6);
   });
 });

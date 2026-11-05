@@ -1,5 +1,5 @@
 import type { Shape } from './pieces';
-import { GROUND_TOP, PLATFORM_DEPTH, PLATFORM_WIDTH, WORLD_WIDTH, shapeOutline, type PieceBody } from './physics';
+import { GROUND_TOP, PLATFORM_DEPTH, PLATFORM_WIDTH, WORLD_WIDTH, PIECE_OUTLINE, shapeOutline, type PieceBody } from './physics';
 
 export interface View {
   /** CSS pixels per logical pixel. */
@@ -16,41 +16,40 @@ export type FaceImages = Map<string, HTMLImageElement>;
 /** The one font used everywhere (also in CSS), so Android and iOS look the same. */
 export const FONT = '"Dela Gothic One", sans-serif';
 export const INK = '#111111';
-const OUTLINE = 3;
+const OUTLINE = PIECE_OUTLINE;
 
-// Paths are built once per shape and reused every frame (no per-frame allocation).
-const detailPaths = new Map<Shape, Path2D>();
-const partPaths = new Map<Shape, Path2D>();
-
-function detailPath(s: Shape): Path2D {
-  let path = detailPaths.get(s);
-  if (path) return path;
-  path = new Path2D();
-  switch (s.kind) {
-    case 'rect':
-      path.roundRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h, s.round ?? 0);
-      break;
-    case 'circle':
-      path.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      break;
-    case 'poly':
-      s.points.forEach(([x, y], i) => (i === 0 ? path!.moveTo(x, y) : path!.lineTo(x, y)));
-      path.closePath();
-      break;
-  }
-  detailPaths.set(s, path);
-  return path;
-}
+// Shapes are traced directly each frame. (Reusing cached Path2D objects under changing
+// transforms is a suspected cause of ghost images on iOS Safari.) Outline points are cached.
+const outlines = new Map<Shape, [number, number][]>();
 
 /** Body parts use the same outline as the physics, so what you see is what collides. */
-function partPath(s: Shape): Path2D {
-  let path = partPaths.get(s);
-  if (path) return path;
-  path = new Path2D();
-  shapeOutline(s).forEach(([x, y], i) => (i === 0 ? path!.moveTo(x, y) : path!.lineTo(x, y)));
-  path.closePath();
-  partPaths.set(s, path);
-  return path;
+function tracePart(ctx: CanvasRenderingContext2D, s: Shape): void {
+  let pts = outlines.get(s);
+  if (!pts) {
+    pts = shapeOutline(s);
+    outlines.set(s, pts);
+  }
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+}
+
+function traceDetail(ctx: CanvasRenderingContext2D, s: Shape): void {
+  ctx.beginPath();
+  switch (s.kind) {
+    case 'rect':
+      ctx.roundRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h, s.round ?? 0);
+      break;
+    case 'circle':
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      break;
+    case 'poly':
+      ctx.moveTo(s.points[0][0], s.points[0][1]);
+      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i][0], s.points[i][1]);
+      ctx.closePath();
+      break;
+  }
 }
 
 function drawDummyFace(ctx: CanvasRenderingContext2D, r: number): void {
@@ -89,15 +88,20 @@ export function drawPiece(
   ctx.lineJoin = 'round';
   ctx.strokeStyle = INK;
   ctx.lineWidth = OUTLINE * 2;
-  for (const part of p.def.parts) ctx.stroke(partPath(part));
   for (const part of p.def.parts) {
+    tracePart(ctx, part);
+    ctx.stroke();
+  }
+  for (const part of p.def.parts) {
+    tracePart(ctx, part);
     ctx.fillStyle = part.color;
-    ctx.fill(partPath(part));
+    ctx.fill();
   }
 
   for (const d of p.def.details ?? []) {
+    traceDetail(ctx, d);
     ctx.fillStyle = d.color;
-    ctx.fill(detailPath(d));
+    ctx.fill();
   }
   const f = p.def.face;
   if (f) {

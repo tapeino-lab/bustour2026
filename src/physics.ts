@@ -15,6 +15,19 @@ export const STEP_SEC = 1 / 60;
 
 /** Pixels per metre. Keeps pieces around 1–4 m, the range Box2D-style engines like best. */
 const PX = 30;
+/**
+ * Width of the ink outline drawn outside every piece shape, in px. Pieces collide with this
+ * outline included (a rounded skin around the polygon), so touching pieces look touching.
+ */
+export const PIECE_OUTLINE = 3;
+/** The platform's outline sticks out half its 3px line width. */
+export const PLATFORM_OUTLINE = 1.5;
+
+/** Gives a polygon a rounded skin of `px` pixels, the same shape a round-joined stroke draws. */
+function withSkin<T extends { m_radius: number }>(shape: T, px: number): T {
+  shape.m_radius = px / PX;
+  return shape;
+}
 /** Gravity in px/s² (same feel as before). */
 const GRAVITY = 1000;
 /** High friction so pieces stick instead of sliding (a slope must exceed ~50° to slide). */
@@ -217,7 +230,9 @@ export class Physics {
       type: 'static',
       position: new Vec2(WORLD_WIDTH / 2 / PX, (GROUND_TOP + PLATFORM_DEPTH / 2) / PX),
     });
-    this.platform.createFixture(new Box(PLATFORM_WIDTH / 2 / PX, PLATFORM_DEPTH / 2 / PX), { friction: FRICTION });
+    this.platform.createFixture(withSkin(new Box(PLATFORM_WIDTH / 2 / PX, PLATFORM_DEPTH / 2 / PX), PLATFORM_OUTLINE), {
+      friction: FRICTION,
+    });
     this.world.on('begin-contact', (c) => {
       for (const f of [c.getFixtureA(), c.getFixtureB()]) {
         const piece = f.getBody().getUserData() as PieceBody | null;
@@ -238,7 +253,7 @@ export class Physics {
     });
     for (const s of piece.def.parts) {
       const verts = shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX));
-      body.createFixture(new Polygon(verts), { density: DENSITY, friction: FRICTION, restitution: 0 });
+      body.createFixture(withSkin(new Polygon(verts), PIECE_OUTLINE), { density: DENSITY, friction: FRICTION, restitution: 0 });
     }
     piece.body = body;
     piece.savePrev();
