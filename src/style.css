@@ -126,7 +126,7 @@ button {
   position: relative;
   z-index: 1;
   margin: 0;
-  font-size: 30px;
+  font-size: 40px;
   font-weight: 400;
   color: var(--red);
   -webkit-text-stroke: 1.5px var(--ink);

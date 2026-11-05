@@ -57,6 +57,8 @@ function resize(): void {
   canvas.height = Math.round(h * dpr);
   scale = w / WORLD_WIDTH;
   game.setViewHeight(h / scale);
+  // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
+  game.render(ctx, scale, dpr, faces);
   if (tutorial.running) startTutorial();
 }
 window.addEventListener('resize', resize);
@@ -89,10 +91,13 @@ function isOverRotate(e: PointerEvent): boolean {
 function endDrag(e: PointerEvent): void {
   if (e.pointerId !== dragPointer) return;
   dragPointer = null;
-  tutorial.setPaused(false);
   // Releasing over the rotate button cancels the drop.
   if (e.type === 'pointercancel' || isOverRotate(e)) game.cancelDrag();
   else game.pointerUp();
+  // Decide after the game reacted: show the hand again only if the piece was not dropped,
+  // otherwise it would flash for a frame before the tutorial ends.
+  if (game.state === 'aim') tutorial.setPaused(false);
+  else tutorial.stop();
 }
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
