@@ -97,6 +97,11 @@ export class Game {
     return this.current ? this.current.bounds.maxY - this.camTop : null;
   }
 
+  /** Top of the platform, in logical px from the top of the screen. */
+  get groundOnScreen(): number {
+    return GROUND_TOP - this.camTop;
+  }
+
   get pieceNumber(): number {
     return this.count;
   }

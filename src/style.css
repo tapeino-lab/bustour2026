@@ -36,7 +36,7 @@ html, body {
   transform-origin: 22px 3px;
 }
 .tutorial.on { display: block; }
-.tutorial svg { display: block; opacity: 0.55; }
+.tutorial svg { display: block; opacity: 0.6; }
 .tutorial.paused { visibility: hidden; }
 #rotate {
   position: absolute;

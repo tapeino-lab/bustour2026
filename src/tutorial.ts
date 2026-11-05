@@ -5,13 +5,13 @@
 /** Hand drawing; the fingertip is at (22, 3) in its 60×80 box. */
 const HAND_SVG = `
 <svg viewBox="0 0 60 80" width="60" height="80" aria-hidden="true">
-  <g fill="none" stroke="#23324a" stroke-width="3" stroke-linejoin="round">
+  <g fill="none" stroke="#b9785a" stroke-width="3" stroke-linejoin="round">
     <rect x="15" y="2" width="14" height="42" rx="7" />
     <circle cx="34" cy="37" r="7" /><circle cx="42" cy="40" r="6.5" /><circle cx="48" cy="45" r="5.5" />
     <ellipse cx="11" cy="52" rx="6" ry="10" transform="rotate(-30 11 52)" />
     <rect x="10" y="34" width="42" height="38" rx="13" />
   </g>
-  <g fill="#ffffff">
+  <g fill="#f7cba8">
     <rect x="15" y="2" width="14" height="42" rx="7" />
     <circle cx="34" cy="37" r="7" /><circle cx="42" cy="40" r="6.5" /><circle cx="48" cy="45" r="5.5" />
     <ellipse cx="11" cy="52" rx="6" ry="10" transform="rotate(-30 11 52)" />
@@ -25,7 +25,7 @@ const DURATION_MS = 5200;
 export interface TutorialPoints {
   /** Centre of the rotate button (CSS px, relative to the game area). */
   tap: { x: number; y: number };
-  /** Swipe line: from left to right at height y. */
+  /** Swipe line: from left to right at height y (between the piece and the ground). */
   swipe: { left: number; right: number; y: number };
 }
 
@@ -46,14 +46,14 @@ export class Tutorial {
 
   start(p: TutorialPoints): void {
     this.stop();
-    // The hand points down from above, so it stays fully on screen even over the bottom button.
+    // Always the same pose: tilted so the index finger points to the upper left.
     const at = (x: number, y: number, s = 1) =>
-      `translate(${x - TIP_X}px, ${y - TIP_Y}px) rotate(180deg) scale(${s})`;
+      `translate(${x - TIP_X}px, ${y - TIP_Y}px) rotate(-40deg) scale(${s})`;
     const { tap, swipe } = p;
     const mid = (swipe.left + swipe.right) / 2;
     const k: Keyframe[] = [
       // Appear on the button and tap it twice.
-      { offset: 0, opacity: 0, transform: at(tap.x, tap.y - 30) },
+      { offset: 0, opacity: 0, transform: at(tap.x + 20, tap.y + 20) },
       { offset: 0.06, opacity: 1, transform: at(tap.x, tap.y) },
       { offset: 0.11, transform: at(tap.x, tap.y, 0.85) },
       { offset: 0.16, transform: at(tap.x, tap.y) },

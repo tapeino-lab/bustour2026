@@ -32,10 +32,11 @@ function startTutorial(): void {
   const a = app.getBoundingClientRect();
   const b = rotateBtn.getBoundingClientRect();
   const pieceBottom = bottom * scale;
-  const buttonTop = b.top - a.top;
+  const ground = game.groundOnScreen * scale;
   tutorial.start({
-    tap: { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height / 2 },
-    swipe: { left: a.width * 0.25, right: a.width * 0.75, y: (pieceBottom + buttonTop) / 2 },
+    // A little above the button centre so the tilted hand stays on screen.
+    tap: { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height * 0.4 },
+    swipe: { left: a.width * 0.25, right: a.width * 0.75, y: (pieceBottom + ground) / 2 },
   });
 }
 
