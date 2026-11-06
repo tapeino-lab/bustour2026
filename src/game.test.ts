@@ -100,7 +100,11 @@ describe('best height', () => {
   it('records the highest settled tower and reports it at game over', () => {
     const g = new Game(seeded(), 700);
     let reported: [number, number] | null = null;
-    g.onGameOver = (s, h) => (reported = [s, h]);
+    let tower = '';
+    g.onGameOver = (s, h, t) => {
+      reported = [s, h];
+      tower = t;
+    };
     g.start();
     g.drop();
     for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
@@ -114,5 +118,8 @@ describe('best height', () => {
     for (let i = 0; i < 2000 && g.state !== 'over'; i++) g.step();
     expect(g.state).toBe('over');
     expect(reported).toEqual([1, settled]);
+    // The snapshot is the tower as it last stood: one piece, not the one that fell.
+    expect(tower.startsWith('v1|')).toBe(true);
+    expect(tower.split(';')).toHaveLength(1);
   });
 });

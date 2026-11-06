@@ -8,6 +8,8 @@ import { buildBackground } from './render';
 import { loadBest, loadBestHeight, loadName, saveBest, saveBestHeight, saveName } from './storage';
 import { isValidName, normalizeName } from './names';
 import { topRows, type RankingRow } from './ranking';
+import { decodeTower, towerBodies } from './tower';
+import { drawTowerImage } from './render';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
 import { waitForFont } from './fonts';
@@ -153,7 +155,12 @@ function startGame(): void {
   }
 }
 
-game.onGameOver = (score, height) => {
+let lastTower = '';
+$('my-tower').addEventListener('click', () => showTower(`こんかいの タワー  ${$('over-score').textContent}こ`, lastTower));
+
+game.onGameOver = (score, height, tower) => {
+  lastTower = tower;
+  $('my-tower').classList.toggle('hidden', score === 0);
   const isNew = score > best || height > bestHeight;
   if (score > best) {
     best = score;
@@ -169,7 +176,7 @@ game.onGameOver = (score, height) => {
   $('over-best-height').textContent = bestHeight.toFixed(1);
   $('new-best').classList.toggle('hidden', !isNew);
   $('ranking').classList.add('hidden');
-  if (online && member) void updateRanking(score, height);
+  if (online && member) void updateRanking(score, height, tower);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
   $('open-join').classList.toggle('hidden', !online || member);
@@ -252,7 +259,7 @@ async function saveEntry(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
 }
 
 /** After a game: register a new personal best (asking for a name the first time), then show the ranking. */
-async function updateRanking(score: number, height: number): Promise<void> {
+async function updateRanking(score: number, height: number, tower: string): Promise<void> {
   if (!online) return;
   try {
     // Nothing to register for a game where no piece was stacked.
@@ -260,10 +267,15 @@ async function updateRanking(score: number, height: number): Promise<void> {
     if (improved) {
       const name = myEntry?.name ?? (loadName() || (await askName('')));
       if (name) {
+        const countUp = score > (myEntry?.count ?? 0);
+        const heightUp = height > (myEntry?.height ?? 0);
         await saveEntry({
           name,
           count: Math.max(score, myEntry?.count ?? 0),
           height: Math.max(height, myEntry?.height ?? 0),
+          // Each record keeps the tower of the game that set it.
+          towerCount: countUp ? tower : myEntry?.towerCount,
+          towerHeight: heightUp ? tower : myEntry?.towerHeight,
         });
       }
     }
@@ -273,12 +285,36 @@ async function updateRanking(score: number, height: number): Promise<void> {
   await showRanking();
 }
 
+/** Opens the tower viewer for a snapshot string; does nothing if it cannot be read. */
+function showTower(title: string, snapshot: string | undefined): void {
+  const tower = decodeTower(snapshot);
+  if (!tower) return;
+  const w = Math.min(300, Math.round(window.innerWidth * 0.78));
+  const h = Math.min(Math.round(w * 1.35), Math.round(window.innerHeight * 0.62));
+  drawTowerImage($<HTMLCanvasElement>('tower-canvas'), towerBodies(tower), w, h, faces);
+  $('tower-title').textContent = title;
+  showOverlay($('tower'), true);
+}
+$('tower-close').addEventListener('click', () => showOverlay($('tower'), false));
+
+/** Top three rows get a thumbnail; every row with a snapshot gets a "みる" chip and opens the viewer. */
+const THUMBS = 3;
+
 function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): void {
   list.replaceChildren();
   rows.forEach((r, i) => {
     const li = document.createElement('li');
-    if (r.dummy) li.className = 'dummy';
-    else if (r.uid === online?.uid) li.className = 'me';
+    if (r.dummy) li.classList.add('dummy');
+    else if (r.uid === online?.uid) li.classList.add('me');
+    const snapshot = kind === 'height' ? r.towerHeight : r.towerCount;
+    const tower = r.dummy ? null : decodeTower(snapshot);
+    if (tower && i < THUMBS) {
+      const thumb = document.createElement('canvas');
+      thumb.className = 'thumb';
+      drawTowerImage(thumb, towerBodies(tower), 30, 40, faces);
+      li.classList.add('thumb-row');
+      li.appendChild(thumb);
+    }
     const rank = document.createElement('span');
     rank.className = 'rank';
     rank.textContent = `${i + 1}`;
@@ -286,8 +322,19 @@ function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): 
     name.textContent = r.name;
     const val = document.createElement('span');
     val.className = 'val';
-    val.textContent = kind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
+    const record = kind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
+    val.textContent = record;
     li.append(rank, name, val);
+    if (tower) {
+      li.classList.add('has-tower');
+      if (i >= THUMBS) {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = 'みる';
+        li.appendChild(chip);
+      }
+      li.addEventListener('click', () => showTower(`${r.name}  ${record}`, snapshot));
+    }
     list.appendChild(li);
   });
 }
@@ -313,7 +360,13 @@ $('rename').addEventListener('click', async () => {
   const name = await askName(myEntry.name);
   if (!name || name === myEntry.name) return;
   try {
-    await saveEntry({ name, count: myEntry.count, height: myEntry.height });
+    await saveEntry({
+      name,
+      count: myEntry.count,
+      height: myEntry.height,
+      towerCount: myEntry.towerCount,
+      towerHeight: myEntry.towerHeight,
+    });
   } catch {
     return;
   }

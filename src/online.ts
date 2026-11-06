@@ -24,6 +24,9 @@ export interface ScoreEntry {
   name: string;
   count: number;
   height: number;
+  /** Tower snapshots (tower.ts) of the games that set the count / height records. */
+  towerCount?: string;
+  towerHeight?: string;
 }
 
 export type RankingKind = 'height' | 'count';
@@ -101,7 +104,11 @@ export class Online {
 
   /** Saves the entry (the caller keeps count/height at their personal bests). */
   async saveScore(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
-    await setDoc(doc(this.db, 'scores', this.uid), { ...entry, updatedAt: serverTimestamp() });
+    // Firestore rejects undefined fields, so leave out snapshots we do not have.
+    const data: Record<string, unknown> = { name: entry.name, count: entry.count, height: entry.height };
+    if (entry.towerCount) data.towerCount = entry.towerCount;
+    if (entry.towerHeight) data.towerHeight = entry.towerHeight;
+    await setDoc(doc(this.db, 'scores', this.uid), { ...data, updatedAt: serverTimestamp() });
   }
 
   /** Top entries for one ranking, best first. */

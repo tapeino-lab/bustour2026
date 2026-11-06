@@ -2,6 +2,7 @@ import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, hasFallen, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
+import { encodeTower } from './tower';
 
 export const STEP_MS = 1000 / 60;
 /** Gap between the tower top and the bottom of a newly spawned piece. */
@@ -27,8 +28,10 @@ export class Game {
   pieces: PieceBody[] = [];
   current: PieceBody | null = null;
   next: PieceBody | null = null;
-  /** Called once per game with the piece count and the highest settled tower (m). */
-  onGameOver: (score: number, height: number) => void = () => {};
+  /** Called once per game with the piece count, the highest settled tower (m) and the last standing tower. */
+  onGameOver: (score: number, height: number, tower: string) => void = () => {};
+  /** Snapshot of the tower the last time it stood still (see tower.ts). */
+  lastTower = encodeTower([]);
   /** Highest settled tower in this game, in metres. */
   bestHeight = 0;
 
@@ -84,6 +87,7 @@ export class Game {
     this.pieces = [];
     this.score = 0;
     this.bestHeight = 0;
+    this.lastTower = encodeTower([]);
     this.count = 0;
     this.overFrames = 0;
     this.aimX = WORLD_WIDTH / 2;
@@ -193,7 +197,7 @@ export class Game {
     if (this.state === 'falling') {
       if (++this.overFrames >= OVER_DELAY_FRAMES) {
         this.state = 'over';
-        this.onGameOver(this.score, this.bestHeight);
+        this.onGameOver(this.score, this.bestHeight, this.lastTower);
       }
       return;
     }
@@ -211,6 +215,7 @@ export class Game {
       if (this.settle.update(motions)) {
         this.score = this.pieces.length;
         this.bestHeight = Math.max(this.bestHeight, this.heightM);
+        this.lastTower = encodeTower(this.pieces);
         this.spawn();
       }
     }

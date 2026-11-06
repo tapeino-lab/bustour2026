@@ -7,7 +7,8 @@ rules_version = '2';
 //   admins/{uid}     {}                        set in the console only; who can upload faces
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
 //   faces/{pieceId}  { image, updatedAt }      face photo (JPEG data URL), members only
-//   scores/{uid}     { name, count, height, updatedAt }  personal bests for the rankings, members only
+//   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight? }
+//                    personal bests for the rankings (+ tower snapshots), members only
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -19,10 +20,15 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
-    // Ranking entry: a three-letter hiragana name (ー allowed) and sane numbers.
+    // Ranking entry: a three-letter hiragana name (ー allowed), sane numbers, optional tower snapshots.
+    function validTower(d, key) {
+      return !(key in d) || (d[key] is string && d[key].size() < 12000 && d[key].matches('^v1[|].*'));
+    }
     function validScore(d) {
       return d.keys().hasAll(['name', 'count', 'height', 'updatedAt'])
-        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt'])
+        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt', 'towerCount', 'towerHeight'])
+        && validTower(d, 'towerCount')
+        && validTower(d, 'towerHeight')
         && d.name is string
         && d.name.matches('^[ぁ-ゖー]{3}$')
         && d.count is int && d.count >= 0 && d.count <= 1000

@@ -197,3 +197,23 @@ button {
 .columns .rank { width: 1.4em; text-align: right; }
 .columns .val { margin-left: auto; }
 .link { margin-top: 6px; padding: 4px; border: none; background: none; font-size: 12px; text-decoration: underline; }
+
+.hint { margin: 0 0 6px; font-size: 11px; text-align: center; }
+.chip {
+  flex: none;
+  padding: 3px 7px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--yellow);
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+#my-tower { margin-top: 8px; padding: 6px 12px; font-size: 13px; }
+.columns li.has-tower { cursor: pointer; }
+.columns li.has-tower:active { background: #ffe680; }
+.columns li.thumb-row { align-items: center; }
+.columns li canvas.thumb { flex: none; border: 2px solid var(--ink); border-radius: 4px; }
+.viewer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.viewer h3 { font-size: 18px; }
+#tower-canvas { border: 3px solid var(--ink); border-radius: 6px; }

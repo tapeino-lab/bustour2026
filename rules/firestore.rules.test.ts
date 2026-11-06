@@ -107,6 +107,13 @@ describe('scores', () => {
     await assertFails(setDoc(doc(as('member1'), 'scores/member2'), score('やまな', 30, 9)));
     await assertFails(setDoc(doc(as('stranger'), 'scores/stranger'), score('やまな', 3, 1.2)));
   });
+  it('accepts tower snapshots but not oversized or foreign ones', async () => {
+    const tower = 'v1|cat,180.0,-20.5,0.000;bus,175.2,-60.1,0.785';
+    await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), towerCount: tower, towerHeight: tower }));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), towerCount: 'x'.repeat(10) }));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), towerCount: `v1|${'a'.repeat(12000)}` }));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), towerCount: 5 }));
+  });
   it('lets bests only go up', async () => {
     await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('ばすた', 6, 2.5)));
     await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.1)));

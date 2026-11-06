@@ -24,8 +24,10 @@
           <p class="result"><b id="over-score">0</b> こ　<b id="over-height">0.0</b> m</p>
           <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
+          <button id="my-tower" class="chip hidden">じぶんの タワーを みる</button>
         </div>
         <div id="ranking" class="panel ranking hidden">
+          <p class="hint">「みる」や えを タップすると タワーが みられるよ</p>
           <div class="columns">
             <div>
               <h4>たかさ</h4>
@@ -51,6 +53,13 @@
             <button id="join-ok" class="comic-btn">はいる</button>
             <button id="join-later" class="comic-btn sub">あとで</button>
           </div>
+        </div>
+      </section>
+      <section id="tower" class="overlay hidden">
+        <div class="panel viewer">
+          <h3 id="tower-title"></h3>
+          <canvas id="tower-canvas"></canvas>
+          <button id="tower-close" class="comic-btn sub">とじる</button>
         </div>
       </section>
       <section id="name" class="overlay hidden">

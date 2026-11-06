@@ -298,3 +298,49 @@ export function drawPreview(
   ctx.setTransform(k * s, 0, 0, k * s, (cx - bx * s) * k, (cy - by * s) * k);
   drawPiece(ctx, p, faces);
 }
+
+/**
+ * Draws a still tower (pieces posed from a snapshot) into `canvas`, sized cssW×cssH CSS px,
+ * scaled to fit with the platform at the bottom.
+ */
+export function drawTowerImage(
+  canvas: HTMLCanvasElement,
+  pieces: PieceBody[],
+  cssW: number,
+  cssH: number,
+  faces: FaceImages,
+): void {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+  const ctx = canvas.getContext('2d')!;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, '#36b6ec');
+  sky.addColorStop(1, '#9fe0fb');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // World area to show: the platform plus every piece (with its outline), and a little sky.
+  const platformLeft = (WORLD_WIDTH - PLATFORM_WIDTH) / 2;
+  let minX = platformLeft - 8;
+  let maxX = platformLeft + PLATFORM_WIDTH + 8;
+  let minY = GROUND_TOP - 40;
+  const maxY = GROUND_TOP + PLATFORM_DEPTH + 8;
+  for (const p of pieces) {
+    const b = p.bounds;
+    minX = Math.min(minX, b.minX - 6);
+    maxX = Math.max(maxX, b.maxX + 6);
+    minY = Math.min(minY, b.minY - 16);
+  }
+  const s = Math.min(cssW / (maxX - minX), cssH / (maxY - minY));
+  const k = s * dpr;
+  // Centre horizontally, sit the platform at the bottom.
+  const ox = (cssW - (maxX - minX) * s) / 2 - minX * s;
+  const oy = cssH - maxY * s;
+  ctx.setTransform(k, 0, 0, k, ox * dpr, oy * dpr);
+  drawPlatform(ctx);
+  for (const p of pieces) drawPiece(ctx, p, faces);
+}
