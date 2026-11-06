@@ -7,6 +7,7 @@ import { WORLD_WIDTH } from './physics';
 import { buildBackground } from './render';
 import { loadBest, loadBestHeight, loadName, saveBest, saveBestHeight, saveName } from './storage';
 import { isValidName, normalizeName } from './names';
+import { topRows, type RankingRow } from './ranking';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
 import { waitForFont } from './fonts';
@@ -214,7 +215,6 @@ async function becomeMember(): Promise<void> {
 
 // ---- Rankings (members only) ------------------------------------------------------------------
 let myEntry: ScoreEntry | null = null;
-let rankingKind: RankingKind = 'height';
 const nameEl = $('name');
 const nameInput = $<HTMLInputElement>('name-input');
 let nameResolve: ((name: string | null) => void) | null = null;
@@ -255,7 +255,8 @@ async function saveEntry(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
 async function updateRanking(score: number, height: number): Promise<void> {
   if (!online) return;
   try {
-    const improved = !myEntry || score > myEntry.count || height > myEntry.height;
+    // Nothing to register for a game where no piece was stacked.
+    const improved = score > 0 && (!myEntry || score > myEntry.count || height > myEntry.height);
     if (improved) {
       const name = myEntry?.name ?? (loadName() || (await askName('')));
       if (name) {
@@ -272,19 +273,12 @@ async function updateRanking(score: number, height: number): Promise<void> {
   await showRanking();
 }
 
-async function showRanking(): Promise<void> {
-  if (!online) return;
-  const list = $('ranking-list');
-  let rows: ScoreEntry[];
-  try {
-    rows = await online.ranking(rankingKind);
-  } catch {
-    return;
-  }
+function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): void {
   list.replaceChildren();
   rows.forEach((r, i) => {
     const li = document.createElement('li');
-    if (r.uid === online?.uid) li.className = 'me';
+    if (r.dummy) li.className = 'dummy';
+    else if (r.uid === online?.uid) li.className = 'me';
     const rank = document.createElement('span');
     rank.className = 'rank';
     rank.textContent = `${i + 1}`;
@@ -292,27 +286,28 @@ async function showRanking(): Promise<void> {
     name.textContent = r.name;
     const val = document.createElement('span');
     val.className = 'val';
-    val.textContent = rankingKind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
+    val.textContent = kind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
     li.append(rank, name, val);
     list.appendChild(li);
   });
-  if (!rows.length) {
-    const li = document.createElement('li');
-    li.className = 'empty';
-    li.textContent = 'まだ だれも いないよ';
-    list.appendChild(li);
+}
+
+/** Both rankings side by side, top 10 each (real players mixed with placeholder rows). */
+async function showRanking(): Promise<void> {
+  if (!online) return;
+  let byHeight: ScoreEntry[];
+  let byCount: ScoreEntry[];
+  try {
+    [byHeight, byCount] = await Promise.all([online.ranking('height'), online.ranking('count')]);
+  } catch {
+    return;
   }
+  fillRanking($('ranking-height'), topRows(byHeight, 'height'), 'height');
+  fillRanking($('ranking-count'), topRows(byCount, 'count'), 'count');
   $('rename').classList.toggle('hidden', !myEntry);
   $('ranking').classList.remove('hidden');
 }
 
-for (const tab of document.querySelectorAll<HTMLButtonElement>('.tab')) {
-  tab.addEventListener('click', () => {
-    rankingKind = tab.dataset.kind === 'count' ? 'count' : 'height';
-    for (const t of document.querySelectorAll('.tab')) t.classList.toggle('on', t === tab);
-    void showRanking();
-  });
-}
 $('rename').addEventListener('click', async () => {
   if (!myEntry) return;
   const name = await askName(myEntry.name);

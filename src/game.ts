@@ -11,7 +11,8 @@ export const FREE_FALL_GRAVITY = 0.4;
 const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
 const GROUND_FROM_BOTTOM = 190;
-const OVER_DELAY_FRAMES = 70;
+/** Steps between a piece falling off and the game-over screen (kept short on purpose). */
+const OVER_DELAY_FRAMES = 6;
 /** A new piece pops out of a smoke cloud: it grows to full size over this many steps… */
 export const APPEAR_FRAMES = 24;
 /** …while the cloud lasts this long. */

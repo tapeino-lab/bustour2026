@@ -116,34 +116,6 @@ button {
     radial-gradient(circle, rgba(0, 0, 0, 0.18) 1.6px, transparent 2px) 0 0 / 10px 10px,
     rgba(255, 255, 255, 0.55);
 }
-.burst {
-  position: relative;
-  width: 260px;
-  height: 110px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(5px 5px 0 var(--ink));
-}
-.burst::before, .burst::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(50% 0%, 59% 22%, 79% 6%, 74% 30%, 100% 24%, 82% 45%, 100% 60%, 76% 64%, 86% 92%, 62% 76%, 50% 100%, 40% 77%, 14% 94%, 24% 66%, 0% 62%, 18% 46%, 0% 26%, 26% 30%, 20% 5%, 41% 22%);
-}
-.burst::before { background: var(--ink); }
-.burst::after { inset: 5px; background: var(--yellow); }
-.burst h2 {
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  font-size: 40px;
-  font-weight: 400;
-  color: var(--red);
-  -webkit-text-stroke: 1.5px var(--ink);
-  transform: rotate(-4deg);
-}
 .panel {
   padding: 12px 22px;
   border: 3px solid var(--ink);
@@ -212,31 +184,16 @@ button {
 #admin-list label { margin-left: auto; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--yellow); font-size: 12px; }
 #admin-list input { display: none; }
 
-#over { gap: 10px; padding: 16px; justify-content: flex-start; padding-top: max(16px, 4vh); }
+#over { gap: 12px; padding: 16px; }
 #over > .panel { padding: 8px 18px; }
-.ranking { width: min(330px, 94%); padding: 8px 12px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
-.tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
-.tab {
-  padding: 6px 18px;
-  border: 3px solid var(--ink);
-  border-radius: 10px;
-  background: #fff;
-  font-size: 15px;
-  line-height: 1;
-}
-.tab.on { background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
-#ranking-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  max-height: 34vh;
-  text-align: left;
-  font-size: 15px;
-}
-#ranking-list li { display: flex; gap: 10px; align-items: baseline; padding: 3px 6px; border-bottom: 2px solid #eee; }
-#ranking-list li.me { background: #fff4b8; }
-#ranking-list .rank { width: 2.2em; text-align: right; }
-#ranking-list .val { margin-left: auto; }
-#ranking-list .empty { justify-content: center; color: #666; font-size: 13px; }
+.ranking { width: min(360px, 96%); padding: 8px 12px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
+.columns { display: flex; gap: 10px; }
+.columns > div { flex: 1; min-width: 0; }
+.columns h4 { margin: 0 0 4px; font-size: 15px; font-weight: 400; text-align: center; }
+.columns ol { list-style: none; margin: 0; padding: 0; text-align: left; font-size: 13px; }
+.columns li { display: flex; gap: 6px; align-items: baseline; padding: 2px 4px; border-bottom: 2px solid #eee; white-space: nowrap; }
+.columns li.me { background: #fff4b8; }
+.columns li.dummy { color: #a0a0a0; }
+.columns .rank { width: 1.4em; text-align: right; }
+.columns .val { margin-left: auto; }
 .link { margin-top: 6px; padding: 4px; border: none; background: none; font-size: 12px; text-decoration: underline; }

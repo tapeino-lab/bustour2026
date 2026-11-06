@@ -20,18 +20,22 @@
         <span>かいてん</span>
       </button>
       <section id="over" class="overlay hidden">
-        <div class="burst"><h2>おちた！</h2></div>
         <div class="panel">
           <p class="result"><b id="over-score">0</b> こ　<b id="over-height">0.0</b> m</p>
           <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
         </div>
         <div id="ranking" class="panel ranking hidden">
-          <div class="tabs">
-            <button class="tab on" data-kind="height">たかさ</button>
-            <button class="tab" data-kind="count">こすう</button>
+          <div class="columns">
+            <div>
+              <h4>たかさ</h4>
+              <ol id="ranking-height"></ol>
+            </div>
+            <div>
+              <h4>こすう</h4>
+              <ol id="ranking-count"></ol>
+            </div>
           </div>
-          <ol id="ranking-list"></ol>
           <button id="rename" class="link hidden">なまえを かえる</button>
         </div>
         <button id="retry" class="comic-btn">もういちど</button>

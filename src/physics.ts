@@ -9,8 +9,11 @@ export const GROUND_TOP = 0;
 export const PLATFORM_WIDTH = 230;
 /** Thickness of the platform (the green strip); there is nothing below it. */
 export const PLATFORM_DEPTH = 12;
-/** A piece whose top edge is this far below the platform top has fallen off. */
-export const FALL_MARGIN = 30;
+/**
+ * A piece whose lowest point is this far below the platform's underside has fallen off:
+ * the platform is only a thin strip, so nothing down there can hold it any more.
+ */
+export const FALL_MARGIN = 8;
 export const STEP_SEC = 1 / 60;
 
 /** Pixels per metre. Keeps pieces around 1–4 m, the range Box2D-style engines like best. */
@@ -265,7 +268,7 @@ export class Physics {
 }
 
 export function hasFallen(p: PieceBody): boolean {
-  return p.bounds.minY > GROUND_TOP + FALL_MARGIN;
+  return p.bounds.maxY > GROUND_TOP + PLATFORM_DEPTH + FALL_MARGIN;
 }
 
 /** Highest point (smallest y) among pieces; the platform top if there are none. */

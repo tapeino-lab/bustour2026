@@ -27,7 +27,7 @@ export interface ScoreEntry {
 }
 
 export type RankingKind = 'height' | 'count';
-export const RANKING_SIZE = 20;
+export const RANKING_SIZE = 10;
 
 export class Online {
   private constructor(
