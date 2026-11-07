@@ -270,7 +270,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ---- Sound: off at every launch; toggles under the つぎ panel --------------------------------
 const sound = new Sound();
-game.onSound = (name) => sound.play(name);
+game.onSound = (name, size) => sound.play(name, size);
 // Another app/tab in front, or the screen locked: pause the music and effects until we are back.
 document.addEventListener('visibilitychange', () => sound.setHidden(document.hidden));
 window.addEventListener('pagehide', () => sound.setHidden(true));
