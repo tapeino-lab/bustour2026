@@ -33,7 +33,7 @@ const POYO_VARIANTS: PoyoNote[][] = [
   // ぽよよん: a bit longer, with a big wobble
   [{ at: 0, dur: 0.3, pts: [[0, 360], [0.05, 760], [0.3, 520]], wobble: [12, 70], vol: 0.33 }],
 ];
-/** A piece of this radius gets the sounds at their written pitch. */
+/** A piece of this size (√area in px, about a cat) gets the sounds at their written pitch. */
 const POYO_BASE_SIZE = 50;
 
 export class Sound {
@@ -124,7 +124,7 @@ export class Sound {
     this.bgmPlayer = player;
   }
 
-  /** `size` (a piece's radius) sets the pitch of the spawn sound. */
+  /** `size` (√area of the piece, in px) sets the pitch of the spawn sound. */
   play(name: SoundName, size = POYO_BASE_SIZE): void {
     if (!this.sfxOn || !this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
@@ -154,8 +154,8 @@ export class Sound {
   /** A random poyo, pitched lower for a big piece and higher for a small one. */
   private poyo(t: number, size: number): void {
     const variant = POYO_VARIANTS[Math.floor(Math.random() * POYO_VARIANTS.length)];
-    // About ×0.78 for the bus (radius 76) up to ×1.24 for the smallest pieces (radius 35).
-    const pitch = Math.min(1.3, Math.max(0.75, (POYO_BASE_SIZE / size) ** 0.6));
+    // Size is √area: about ×0.72 for the bus (88) up to ×1.25 for the bird and the weed (34–35).
+    const pitch = Math.min(1.3, Math.max(0.72, (POYO_BASE_SIZE / size) ** 0.6));
     for (const n of variant) this.poyoNote(t + n.at, n, pitch);
   }
 

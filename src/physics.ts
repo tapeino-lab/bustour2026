@@ -251,6 +251,19 @@ export class PieceBody {
     return this.boundsCache;
   }
 
+  /** Rough area in px² (sum of the parts' outlines; overlaps count twice). */
+  get area(): number {
+    return this.def.parts.reduce((sum, part) => {
+      const pts = shapeOutline(part);
+      let a = 0;
+      pts.forEach(([x1, y1], i) => {
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        a += x1 * y2 - x2 * y1;
+      });
+      return sum + Math.abs(a) / 2;
+    }, 0);
+  }
+
   /** Largest distance from the local origin to the outline. */
   get radius(): number {
     return this.outlines.flat().reduce((r, [x, y]) => Math.max(r, Math.hypot(x, y)), 0);

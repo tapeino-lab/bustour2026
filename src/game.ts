@@ -38,7 +38,7 @@ export class Game {
    * tower (with the piece that knocked it over).
    */
   onGameOver: (score: number, height: number, tower: string) => void = () => {};
-  /** Called for moments that make a sound (`size`: the radius of the piece that appeared). */
+  /** Called for moments that make a sound (`size`: √area of the piece that appeared, in px). */
   onSound: (name: SoundName, size?: number) => void = () => {};
   /** Snapshot of the tower the last time it stood still (see tower.ts). */
   lastTower = encodeTower([]);
@@ -120,7 +120,7 @@ export class Game {
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
     this.current.setPose(this.aimX, top - SPAWN_GAP - this.radius, 0);
     this.poof = { x: this.current.x, y: this.current.y, size: Math.max(34, this.radius * 0.95) };
-    this.onSound('spawn', this.radius);
+    this.onSound('spawn', Math.sqrt(this.current.area));
     this.spawnAge = 0;
     this.state = 'aim';
   }
