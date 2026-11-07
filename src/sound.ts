@@ -111,7 +111,7 @@ export class Sound {
         this.noise(t, 0.06, 600, 0.25);
         break;
       case 'spawn':
-        this.noise(t, 0.2, 900, 0.5);
+        this.poyo(t);
         break;
       case 'over':
         [440, 370, 294].forEach((f, i) => this.tone(t + i * 0.14, f, f * 0.97, 0.16, 'triangle', 0.55));
@@ -120,6 +120,37 @@ export class Sound {
         [523, 659, 784, 1047].forEach((f, i) => this.tone(t + i * 0.09, f, f, 0.12, 'triangle', 0.5));
         break;
     }
+  }
+
+  /**
+   * A cute "poyo": a soft sine that bounces up and settles down, with a quick wobble like jelly.
+   */
+  private poyo(t: number): void {
+    const ctx = this.ctx!;
+    const dur = 0.2;
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = 'sine';
+    // Po: a quick swoop up. Yo: a gentle slide down.
+    osc.frequency.setValueAtTime(380, t);
+    osc.frequency.exponentialRampToValueAtTime(880, t + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(560, t + dur);
+    // The wobble: a fast vibrato on the pitch.
+    const lfo = ctx.createOscillator();
+    const depth = ctx.createGain();
+    lfo.frequency.value = 22;
+    depth.gain.setValueAtTime(0, t);
+    depth.gain.linearRampToValueAtTime(45, t + 0.06);
+    lfo.connect(depth).connect(osc.frequency);
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.7, t + 0.015);
+    env.gain.exponentialRampToValueAtTime(0.35, t + 0.08);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(env).connect(this.sfxGain!);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + dur + 0.02);
+    lfo.stop(t + dur + 0.02);
   }
 
   /** A short note sliding from f1 to f2 Hz with a quick fade-out. */
