@@ -47,6 +47,20 @@ export function decodeTower(s: unknown): TowerPiece[] | null {
   return out;
 }
 
+/**
+ * Older snapshots of pieces whose segments were later split up: for each old segment count,
+ * which old segment each current segment follows. (The axolotl went from 3 to 6 to 5 segments,
+ * then 7 when its legs got knees; a leg recorded in one piece is drawn as a straight leg.)
+ */
+const LEGACY_SEGMENTS: Record<string, Record<number, number[]>> = {
+  // now: head, body, tail, front thigh, front shin, back thigh, back shin
+  axolotl: {
+    3: [0, 1, 2, 1, 1, 1, 1], // head, body (with legs), tail
+    5: [0, 1, 2, 3, 3, 4, 4], // head, body, tail, front leg, back leg
+    6: [0, 1, 3, 4, 4, 5, 5], // head, front body, back body, tail, front leg, back leg
+  },
+};
+
 /** Pieces ready to draw (posed, without physics). */
 export function towerBodies(tower: TowerPiece[]): PieceBody[] {
   return tower.map((t) => {
@@ -56,6 +70,10 @@ export function towerBodies(tower: TowerPiece[]): PieceBody[] {
     body.setPose(first.x, first.y, first.angle);
     // Restore each segment's own pose when the snapshot has them (soft pieces).
     if (t.poses.length === body.segments) t.poses.forEach((q, i) => body.setSegPose(i, q));
+    else {
+      const map = LEGACY_SEGMENTS[t.id]?.[t.poses.length];
+      if (map?.length === body.segments) map.forEach((from, i) => body.setSegPose(i, t.poses[from]));
+    }
     return body;
   });
 }

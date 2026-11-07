@@ -33,6 +33,20 @@ describe('tower snapshots', () => {
     expect(back.segPose(2).angle).toBeCloseTo(0.3, 3);
   });
 
+  it('draws older axolotl records (fewer segments) with their bends', () => {
+    const pose = (x: number, a: number) => `${x},-50,${a}`;
+    // 5 segments: head, body, tail, front leg, back leg (before the knees were added).
+    const [five] = towerBodies(decodeTower(`v1|axolotl,${[pose(1, 0), pose(2, 0.1), pose(3, 0.2), pose(4, 0.3), pose(5, 0.4)].join(',')}`)!);
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => five.segPose(i).angle)).toEqual([0, 0.1, 0.2, 0.3, 0.3, 0.4, 0.4]);
+    // 6 segments: head, front body, back body, tail, front leg, back leg.
+    const [six] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2, 3, 4, 5].map((i) => pose(i, i / 10)).join(',')}`)!);
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => six.segPose(i).angle)).toEqual([0, 0.1, 0.3, 0.4, 0.4, 0.5, 0.5]);
+    // 3 segments: head, body, tail; legs follow the body.
+    const [three] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2].map((i) => pose(i, i / 10)).join(',')}`)!);
+    expect(three.segPose(6).angle).toBe(0.1);
+    expect(three.segPose(2).x).toBe(2);
+  });
+
   it('keeps a 50-piece tower well under the size limit', () => {
     const many = Array.from({ length: 50 }, () => {
       const p = new PieceBody(ALL_PIECES[1]);
