@@ -452,7 +452,9 @@ export class Physics {
       if (p.frozen || p.joints.length !== p.def.joints?.length) continue;
       p.def.joints.forEach((j, i) => {
         const joint = p.joints[i];
-        if (j.landed && joint instanceof RevoluteJoint) joint.setLimits(j.landed[0], j.landed[1]);
+        if (!j.landed || !(joint instanceof RevoluteJoint)) return;
+        if (j.landed === 'free') joint.enableLimit(false);
+        else joint.setLimits(j.landed[0], j.landed[1]);
       });
     }
     this.justLanded.clear();

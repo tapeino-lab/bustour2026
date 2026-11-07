@@ -98,7 +98,7 @@ describe('physics', () => {
     expect(settledAt).toBeGreaterThan(0);
   });
 
-  it('axolotl legs only bend outwards while falling, then swing both ways once landed', () => {
+  it('axolotl legs only bend outwards while falling, then turn freely once landed', () => {
     const physics = new Physics();
     const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
     const p = new PieceBody(def, WORLD_WIDTH / 2, GROUND_TOP - 200);
@@ -115,8 +115,7 @@ describe('physics', () => {
     }
     expect(p.landed).toBe(true);
     const hip = p.joints[3] as RevoluteJoint;
-    expect(hip.getLowerLimit()).toBeCloseTo(-0.6);
-    expect(hip.getUpperLimit()).toBeCloseTo(0.4);
+    expect(hip.isLimitEnabled()).toBe(false);
   });
 
   it('a frozen soft piece keeps its shape even with weight on it', () => {
