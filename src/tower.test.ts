@@ -24,7 +24,7 @@ describe('tower snapshots', () => {
 
   it('keeps each segment of a soft piece', () => {
     const soft = new PieceBody(ALL_PIECES.find((d) => d.id === 'axolotl')!);
-    expect(soft.segments).toBe(5);
+    expect(soft.segments).toBe(7);
     soft.setPose(100, -50, 0);
     soft.setSegPose(2, { x: 104, y: -46, angle: 0.3 });
     const [back] = towerBodies(decodeTower(encodeTower([soft]))!);

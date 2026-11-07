@@ -1,4 +1,4 @@
-import { Box, Circle, Polygon, Vec2, WeldJoint, World, type Body } from 'planck';
+import { Box, Circle, Polygon, RevoluteJoint, Vec2, WeldJoint, World, type Body, type Joint } from 'planck';
 import { segmentCount, type PieceDef, type Shape } from './pieces';
 
 // All values outside this file are in logical pixels and "per step" (1/60 s) units,
@@ -107,8 +107,8 @@ export interface Pose {
 export class PieceBody {
   /** One body per segment once the piece is in the world. */
   bodies: Body[] = [];
-  /** Welds between segments (soft until the piece is frozen). */
-  joints: WeldJoint[] = [];
+  /** Joints between segments (until the piece is frozen). */
+  joints: Joint[] = [];
   /** True once a soft piece has been locked into its current shape. */
   frozen = false;
   readonly segments: number;
@@ -289,6 +289,8 @@ export class PieceBody {
 
 /** Soft welds: springy enough to sag, damped enough not to keep wobbling. */
 const SOFT_WELD = { frequencyHz: 3.5, dampingRatio: 1 };
+/** Friction torque in hinges (N·m): enough to stop dangling, too little to hold up the body. */
+const HINGE_FRICTION = 0.15;
 
 export class Physics {
   readonly world: World;
@@ -339,19 +341,35 @@ export class Physics {
     piece.joints = [];
     for (const j of piece.def.joints ?? []) {
       const anchor = piece.localToWorld(j.x, j.y);
-      const joint = this.world.createJoint(
-        new WeldJoint(
-          {
-            frequencyHz: j.hz ?? SOFT_WELD.frequencyHz,
-            dampingRatio: j.damping ?? SOFT_WELD.dampingRatio,
-            collideConnected: false,
-          },
-          bodies[j.a],
-          bodies[j.b],
-          new Vec2(anchor.x / PX, anchor.y / PX),
-        ),
-      );
-      if (joint) piece.joints.push(joint);
+      const at = new Vec2(anchor.x / PX, anchor.y / PX);
+      const joint = j.hinge
+        ? // A limited hinge with a little friction, so the limb swings to its limit and stays.
+          new RevoluteJoint(
+            {
+              enableLimit: true,
+              lowerAngle: j.hinge[0],
+              upperAngle: j.hinge[1],
+              enableMotor: true,
+              motorSpeed: 0,
+              maxMotorTorque: HINGE_FRICTION,
+              collideConnected: false,
+            },
+            bodies[j.a],
+            bodies[j.b],
+            at,
+          )
+        : new WeldJoint(
+            {
+              frequencyHz: j.hz ?? SOFT_WELD.frequencyHz,
+              dampingRatio: j.damping ?? SOFT_WELD.dampingRatio,
+              collideConnected: false,
+            },
+            bodies[j.a],
+            bodies[j.b],
+            at,
+          );
+      const created = this.world.createJoint(joint);
+      if (created) piece.joints.push(created);
     }
     piece.bodies = bodies;
     piece.savePrev();

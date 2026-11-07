@@ -101,6 +101,10 @@ function resize(): void {
   soundEl.style.left = `${(WORLD_WIDTH - 94) * scale}px`;
   soundEl.style.top = `${96 * scale}px`;
   soundEl.style.width = `${82 * scale}px`;
+  // The ranking button sits under the score panel on the left, level with the sound switches.
+  const rankBtn = $('ranking-open');
+  rankBtn.style.left = `${10 * scale}px`;
+  rankBtn.style.top = `${96 * scale}px`;
   buildBackground(canvas.width, canvas.height, scale * dpr);
   debug?.resize(`${w}×${h}`);
   // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
@@ -262,6 +266,7 @@ async function becomeMember(): Promise<void> {
   const o = online;
   sound.loadBgm = () => o.loadBgm();
   $('bgm-toggle').classList.remove('hidden');
+  $('ranking-open').classList.remove('hidden');
   setFaces(await online.loadFaces());
   myEntry = await online.myScore().catch(() => null);
 }
@@ -429,21 +434,31 @@ function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): 
   });
 }
 
-/** Both rankings side by side, top 10 each (real players mixed with placeholder rows). */
-async function showRanking(): Promise<void> {
-  if (!online) return;
-  let byHeight: ScoreEntry[];
-  let byCount: ScoreEntry[];
+/** Loads both rankings (top 10 each, mixed with placeholder rows) into two lists. */
+async function loadRankingInto(heightList: HTMLElement, countList: HTMLElement): Promise<boolean> {
+  if (!online) return false;
   try {
-    [byHeight, byCount] = await Promise.all([online.ranking('height'), online.ranking('count')]);
+    const [byHeight, byCount] = await Promise.all([online.ranking('height'), online.ranking('count')]);
+    fillRanking(heightList, topRows(byHeight, 'height'), 'height');
+    fillRanking(countList, topRows(byCount, 'count'), 'count');
+    return true;
   } catch {
-    return;
+    return false;
   }
-  fillRanking($('ranking-height'), topRows(byHeight, 'height'), 'height');
-  fillRanking($('ranking-count'), topRows(byCount, 'count'), 'count');
+}
+
+/** Rankings on the game-over screen. */
+async function showRanking(): Promise<void> {
+  if (!(await loadRankingInto($('ranking-height'), $('ranking-count')))) return;
   $('rename').classList.toggle('hidden', !myEntry);
   $('ranking').classList.remove('hidden');
 }
+
+// Trophy button (top left): the rankings at any time.
+$('ranking-open').addEventListener('click', async () => {
+  if (await loadRankingInto($('rv-height'), $('rv-count'))) showOverlay($('ranking-view'), true);
+});
+$('ranking-close').addEventListener('click', () => showOverlay($('ranking-view'), false));
 
 $('rename').addEventListener('click', async () => {
   if (!myEntry) return;

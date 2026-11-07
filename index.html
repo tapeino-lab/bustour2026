@@ -12,6 +12,13 @@
   <body>
     <div id="app">
       <canvas id="game"></canvas>
+      <button id="ranking-open" class="toggle trophy hidden" aria-label="ランキング">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M9 5h14v7a7 7 0 0 1-14 0Z" fill="#ffd60a" stroke="#111" stroke-width="2.5" stroke-linejoin="round" />
+          <path d="M9 8H5v2a5 5 0 0 0 5 5M23 8h4v2a5 5 0 0 1-5 5" fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round" />
+          <path d="M16 19v5M11 27h10" stroke="#111" stroke-width="3" stroke-linecap="round" />
+        </svg>
+      </button>
       <div id="sound" class="sound">
         <button id="bgm-toggle" class="toggle hidden" aria-pressed="false">BGM</button>
         <button id="sfx-toggle" class="toggle" aria-pressed="false">おと</button>
@@ -60,6 +67,22 @@
             <button id="join-later" class="comic-btn sub">あとで</button>
             <button id="join-ok" class="comic-btn">はいる</button>
           </div>
+        </div>
+      </section>
+      <section id="ranking-view" class="overlay hidden">
+        <div class="panel ranking">
+          <h3>ランキング</h3>
+          <div class="columns">
+            <div>
+              <h4>たかさ</h4>
+              <ol id="rv-height"></ol>
+            </div>
+            <div>
+              <h4>こすう</h4>
+              <ol id="rv-count"></ol>
+            </div>
+          </div>
+          <button id="ranking-close" class="comic-btn sub rename">とじる</button>
         </div>
       </section>
       <section id="tower" class="overlay hidden">

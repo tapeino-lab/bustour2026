@@ -36,6 +36,11 @@ export interface SoftJoint {
   /** Stiffness (Hz; lower = floppier) and damping (1 = no wobble, lower = wobbles a bit). */
   hz?: number;
   damping?: number;
+  /**
+   * A hinge instead of a weld: segment b can only turn within [min, max] radians relative to a,
+   * from its starting angle, e.g. a knee that only bends outwards.
+   */
+  hinge?: [number, number];
 }
 
 export interface PieceDef {
@@ -239,21 +244,26 @@ const RAW_ANIMALS: PieceDef[] = [
       polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
       rect(2, 6, 60, 22, '#f7a8c4', 11, 1),
       polySeg(2, '#f7a8c4', [30, -2], [66, 2], [70, 10], [30, 16]),
-      // Legs splayed outwards, so they bend open rather than tucking under.
-      // Slippery feet slide outwards as the body flops down (splaying instead of tucking in).
-      { ...limb('#f7a8c4', -20, 16, -32, 34, 8), seg: 3, friction: 0.2 },
-      { ...limb('#f7a8c4', 24, 16, 36, 34, 8), seg: 4, friction: 0.2 },
+      // Each leg has a knee: thigh and shin, already bent outwards, so under the body's weight the
+      // knees give way outwards and the legs splay open. Slippery feet help them slide out.
+      { ...limb('#f7a8c4', -20, 15, -28, 26, 8), seg: 3 },
+      { ...limb('#f7a8c4', -28, 26, -40, 34, 7), seg: 4, friction: 0.2 },
+      { ...limb('#f7a8c4', 24, 15, 32, 26, 8), seg: 5 },
+      { ...limb('#f7a8c4', 32, 26, 44, 34, 7), seg: 6, friction: 0.2 },
     ],
     details: [
-      ...toes(-33, 36, '#e57aa3', 3), ...toes(37, 36, '#e57aa3', 4),
+      ...toes(-42, 36, '#e57aa3', 4), ...toes(46, 36, '#e57aa3', 6),
       polySeg(2, '#fbd0df', [36, 0], [64, 3], [64, 6], [36, 4]),
     ],
     face: { x: -40, y: 0, r: 14, seg: 0 },
     joints: [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
       { a: 1, b: 2, x: 31, y: 6, hz: 2, damping: 1 },
-      { a: 1, b: 3, x: -20, y: 17, hz: 3.5, damping: 0.8 },
-      { a: 1, b: 4, x: 24, y: 17, hz: 3.5, damping: 0.8 },
+      // Hips and knees only bend outwards: the front leg to the left, the back leg to the right.
+      { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0] },
+      { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0] },
+      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5] },
+      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8] },
     ],
   },
   {
@@ -342,9 +352,9 @@ const RAW_ANIMALS: PieceDef[] = [
   {
     // Petals all round a brown centre, like a picture-book sunflower.
     id: 'sunflower', name: 'ひまわり',
-    parts: [...petals(14, 19, 40, 13, '#ffd84d', '#f6c12e'), circle(0, 0, 21, '#c98a3a')],
-    details: seedGrid(21, '#7a4a1e'),
-    face: { x: 0, y: 0, r: 15 },
+    parts: [...petals(14, 21, 42, 13, '#ffd84d', '#f6c12e'), circle(0, 0, 23, '#c98a3a')],
+    details: seedGrid(23, '#7a4a1e'),
+    face: { x: 0, y: 0, r: 19 },
   },
   {
     id: 'leaf', name: 'はっぱ',
