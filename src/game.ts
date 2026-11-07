@@ -1,6 +1,6 @@
 import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
-import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, hasFallen, towerTop } from './physics';
+import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
 import { encodeTower } from './tower';
 
@@ -12,8 +12,10 @@ export const FREE_FALL_GRAVITY = 0.4;
 const HUD_SPACE = 100;
 /** Logical px between the platform top and the bottom of the screen at the start. */
 const GROUND_FROM_BOTTOM = 190;
-/** Steps between a piece falling off and the game-over screen (kept short on purpose). */
-const OVER_DELAY_FRAMES = 6;
+/** Steps between a piece falling off and the game-over screen. */
+const OVER_DELAY_FRAMES = 1;
+/** A piece this far below the screen bottom ends the game even if it is still touching something. */
+const FAR_BELOW = 200;
 /** A new piece pops out of a smoke cloud: it grows to full size over this many steps… */
 export const APPEAR_FRAMES = 24;
 /** …while the cloud lasts this long. */
@@ -202,7 +204,7 @@ export class Game {
       return;
     }
 
-    if (this.pieces.some((p) => hasFallen(p))) {
+    if (this.pieces.some((p) => this.fellOff(p))) {
       this.state = 'falling';
       this.dragging = false;
       this.current = null;
@@ -219,6 +221,16 @@ export class Game {
         this.spawn();
       }
     }
+  }
+
+  /**
+   * Game over when a falling piece that touches nothing reaches the bottom edge of the screen
+   * (or, as a safety net, is far below it).
+   */
+  private fellOff(p: PieceBody): boolean {
+    const bottom = this.camTop + this.viewH;
+    const maxY = p.bounds.maxY;
+    return (maxY >= bottom && !p.touching) || maxY >= bottom + FAR_BELOW;
   }
 
   private stepPhysics(): void {

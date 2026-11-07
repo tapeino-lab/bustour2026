@@ -123,3 +123,27 @@ describe('best height', () => {
     expect(tower.split(';')).toHaveLength(1);
   });
 });
+
+describe('game over timing', () => {
+  it('ends only when a free-falling piece reaches the bottom edge of the screen', () => {
+    const viewH = 700;
+    const g = new Game(seeded(), viewH);
+    g.start();
+    // Throw the first piece off the side of the platform.
+    g.pointerDown(180);
+    g.pointerMove(5);
+    g.pointerUp();
+    const piece = g.pieces[0];
+    const screenBottom = GROUND_TOP - (viewH - 190) + viewH; // camera at its start position
+    let lastMaxY = -Infinity;
+    for (let i = 0; i < 2000 && g.state === 'drop'; i++) {
+      lastMaxY = piece.bounds.maxY;
+      g.step();
+    }
+    expect(g.state === 'falling' || g.state === 'over').toBe(true);
+    // Still above the bottom edge one step earlier, at or past it now.
+    expect(lastMaxY).toBeLessThan(screenBottom);
+    expect(piece.bounds.maxY).toBeGreaterThanOrEqual(screenBottom);
+    expect(piece.touching).toBe(false);
+  });
+});

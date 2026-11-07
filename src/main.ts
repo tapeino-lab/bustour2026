@@ -6,7 +6,9 @@ import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { buildBackground } from './render';
 import { loadBest, loadBestHeight, loadName, saveBest, saveBestHeight, saveName } from './storage';
-import { isValidName, normalizeName } from './names';
+import {
+  KANA_COLUMNS, NAME_LENGTH, isValidName, toggleDakuten, toggleHandakuten, toggleSmall, typeKana,
+} from './names';
 import { topRows, type RankingRow } from './ranking';
 import { decodeTower, towerBodies } from './tower';
 import { drawTowerImage } from './render';
@@ -160,7 +162,10 @@ $('my-tower').addEventListener('click', () => showTower(`こんかいの タワ�
 
 game.onGameOver = (score, height, tower) => {
   lastTower = tower;
-  $('my-tower').classList.toggle('hidden', score === 0);
+  // This game's tower as a thumbnail (tap to enlarge).
+  const myTower = score > 0 ? decodeTower(tower) : null;
+  if (myTower) drawTowerImage($<HTMLCanvasElement>('my-tower-canvas'), towerBodies(myTower), 120, 96, faces);
+  $('my-tower').classList.toggle('hidden', !myTower);
   const isNew = score > best || height > bestHeight;
   if (score > best) {
     best = score;
@@ -223,13 +228,56 @@ async function becomeMember(): Promise<void> {
 // ---- Rankings (members only) ------------------------------------------------------------------
 let myEntry: ScoreEntry | null = null;
 const nameEl = $('name');
-const nameInput = $<HTMLInputElement>('name-input');
+// Names are typed on an on-screen 50-sound keyboard, so only hiragana (max three) can be entered.
+let typedName = '';
+function showTypedName(): void {
+  const boxes = $('name-boxes').children;
+  for (let i = 0; i < NAME_LENGTH; i++) {
+    boxes[i].textContent = typedName[i] ?? '';
+    boxes[i].classList.toggle('next', i === typedName.length);
+  }
+  $('name-error').classList.add('hidden');
+}
+function key(label: string, onPress: () => void, className = ''): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = label;
+  if (className) b.className = className;
+  b.addEventListener('click', () => {
+    onPress();
+    showTypedName();
+  });
+  return b;
+}
+{
+  const keys = $('kana-keys');
+  for (const col of KANA_COLUMNS) {
+    for (const k of col) {
+      const b = key(k || '・', () => (typedName = typeKana(typedName, k)));
+      if (!k) {
+        b.className = 'blank';
+        b.disabled = true;
+      }
+      keys.appendChild(b);
+    }
+  }
+  const tools = document.createElement('div');
+  tools.className = 'kana-tools';
+  tools.append(
+    key('゛', () => (typedName = toggleDakuten(typedName)), 'mark'),
+    key('゜', () => (typedName = toggleHandakuten(typedName)), 'mark'),
+    key('小', () => (typedName = toggleSmall(typedName))),
+    key('ー', () => (typedName = typeKana(typedName, 'ー'))),
+    key('けす', () => (typedName = typedName.slice(0, -1)), 'del'),
+  );
+  keys.after(tools);
+}
 let nameResolve: ((name: string | null) => void) | null = null;
 
 /** Asks for a three-letter hiragana name; null if the player chose not to register. */
 function askName(current: string): Promise<string | null> {
-  nameInput.value = current;
-  $('name-error').classList.add('hidden');
+  typedName = current;
+  showTypedName();
   showOverlay(nameEl, true);
   return new Promise((resolve) => (nameResolve = resolve));
 }
@@ -239,15 +287,12 @@ function closeName(result: string | null): void {
   nameResolve = null;
 }
 $('name-ok').addEventListener('click', () => {
-  const name = normalizeName(nameInput.value);
+  const name = typedName;
   if (!isValidName(name)) {
     $('name-error').classList.remove('hidden');
     return;
   }
   closeName(name);
-});
-nameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.isComposing) $('name-ok').click();
 });
 $('name-skip').addEventListener('click', () => closeName(null));
 

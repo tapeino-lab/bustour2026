@@ -20,11 +20,15 @@
         <span>かいてん</span>
       </button>
       <section id="over" class="overlay hidden">
-        <div class="panel">
-          <p class="result"><b id="over-score">0</b> こ　<b id="over-height">0.0</b> m</p>
+        <div class="panel result-panel">
+          <p class="result"><b id="over-score">0</b> こ</p>
+          <p class="result">たかさ <b id="over-height">0.0</b> m</p>
+          <button id="my-tower" class="my-tower hidden" aria-label="こんかいの タワーを みる">
+            <canvas id="my-tower-canvas"></canvas>
+            <span class="chip">みる</span>
+          </button>
           <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
-          <button id="my-tower" class="chip hidden">じぶんの タワーを みる</button>
         </div>
         <div id="ranking" class="panel ranking hidden">
           <p class="hint">「みる」や えを タップすると タワーが みられるよ</p>
@@ -63,14 +67,15 @@
         </div>
       </section>
       <section id="name" class="overlay hidden">
-        <div class="panel join">
+        <div class="panel namepad">
           <h3>なまえを おしえて</h3>
-          <p class="small">ひらがな 3もじ</p>
-          <input id="name-input" type="text" inputmode="text" maxlength="8" autocomplete="off" autocorrect="off" spellcheck="false" />
+          <p class="name-hint">ひらがな 3もじ</p>
+          <div id="name-boxes" class="name-boxes"><span></span><span></span><span></span></div>
+          <div id="kana-keys" class="kana-keys"></div>
           <p id="name-error" class="error hidden">ひらがな 3もじで いれてね</p>
           <div class="row">
-            <button id="name-ok" class="comic-btn">けってい</button>
             <button id="name-skip" class="comic-btn sub">のせない</button>
+            <button id="name-ok" class="comic-btn sub ok">けってい</button>
           </div>
         </div>
       </section>

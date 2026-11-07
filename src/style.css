@@ -176,6 +176,7 @@ button {
 .error { margin: 4px 0; font-size: 14px; color: var(--red); }
 .row { display: flex; gap: 12px; justify-content: center; margin-top: 10px; }
 #join-ok { padding: 10px 24px; font-size: 18px; line-height: 1; background: var(--red); color: #fff; }
+#name-ok { background: var(--red); color: #fff; }
 .admin { width: min(360px, 94%); max-height: 90%; display: flex; flex-direction: column; }
 .admin code { font-family: monospace; font-size: 11px; -webkit-user-select: all; user-select: all; word-break: break-all; }
 #admin-list { list-style: none; margin: 8px 0; padding: 0; overflow-y: auto; text-align: left; }
@@ -209,7 +210,6 @@ button {
   line-height: 1;
   box-shadow: 2px 2px 0 var(--ink);
 }
-#my-tower { margin-top: 8px; padding: 6px 12px; font-size: 13px; }
 .columns li.has-tower { cursor: pointer; }
 .columns li.has-tower:active { background: #ffe680; }
 .columns li.thumb-row { align-items: center; }
@@ -217,3 +217,58 @@ button {
 .viewer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .viewer h3 { font-size: 18px; }
 #tower-canvas { border: 3px solid var(--ink); border-radius: 6px; }
+
+.namepad { width: min(360px, 96%); padding: 10px 10px 12px !important; }
+.name-hint { margin: 2px 0 8px; font-size: 17px; }
+.name-boxes { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.name-boxes span {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 30px;
+  line-height: 42px;
+  text-align: center;
+}
+.name-boxes span.next { background: #fff4b8; }
+/* 50-sound table: columns あ…わ from right to left, like a printed chart. */
+.kana-keys {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  grid-auto-flow: column;
+  grid-template-rows: repeat(5, auto);
+  direction: rtl;
+  gap: 3px;
+}
+.kana-keys button, .kana-tools button {
+  direction: ltr;
+  padding: 0;
+  height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1;
+  touch-action: manipulation;
+}
+.kana-keys button:active, .kana-tools button:active { background: var(--yellow); }
+.kana-keys .blank { visibility: hidden; }
+.kana-tools { display: grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap: 3px; margin-top: 4px; }
+.kana-tools .del { background: #ffe0e0; font-size: 14px; }
+
+.result-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.result-panel .result { margin: 0; line-height: 1.05; }
+.result-panel .result + .result b { font-size: 34px; }
+.my-tower {
+  position: relative;
+  margin: 6px 0 2px;
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  background: none;
+  line-height: 0;
+}
+.my-tower .chip { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 13px; padding: 4px 12px; line-height: 1; }
+#over { overflow-y: auto; }
+.kana-tools .mark { font-size: 36px; line-height: 1; padding: 0 0 6px; text-indent: -0.45em; overflow: hidden; }

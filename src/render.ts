@@ -169,7 +169,85 @@ export function buildBackground(w: number, h: number, k: number): void {
     }
   }
   g.fill();
+  drawFuji(g, W, H);
   background = c;
+}
+
+/** Comic-style Mt. Fuji filling the lower part of the screen, with a snow cap and clouds. */
+function drawFuji(g: CanvasRenderingContext2D, W: number, H: number): void {
+  // Wide feet and slopes that curve in towards a small flat top, like the real Fuji.
+  const peakY = H * 0.44;
+  const topHalf = W * 0.1;
+  const cx = W * 0.5;
+  const mountain = new Path2D();
+  mountain.moveTo(-W * 0.9, H + 10);
+  mountain.bezierCurveTo(-W * 0.2, H * 0.9, cx - W * 0.22, H * 0.66, cx - topHalf, peakY);
+  mountain.lineTo(cx + topHalf, peakY);
+  mountain.bezierCurveTo(cx + W * 0.22, H * 0.66, W * 1.2, H * 0.9, W * 1.9, H + 10);
+  mountain.closePath();
+
+  const body = g.createLinearGradient(0, peakY, 0, H);
+  body.addColorStop(0, '#3f5fa8');
+  body.addColorStop(1, '#7d9be0');
+  g.fillStyle = body;
+  g.fill(mountain);
+  // Darker halftone inside the mountain.
+  g.save();
+  g.clip(mountain);
+  g.fillStyle = 'rgba(20, 30, 70, 0.18)';
+  g.beginPath();
+  for (let y = peakY; y < H; y += 10) {
+    for (let x = (y / 10) % 2 ? 0 : 5; x < W; x += 10) {
+      g.moveTo(x + 1.8, y);
+      g.arc(x, y, 1.8, 0, Math.PI * 2);
+    }
+  }
+  g.fill();
+  // Snow cap with a jagged lower edge.
+  const snowY = peakY + H * 0.11;
+  g.beginPath();
+  g.moveTo(cx - topHalf - W * 0.02, peakY - 2);
+  g.lineTo(cx + topHalf + W * 0.02, peakY - 2);
+  g.lineTo(cx + W * 0.3, snowY);
+  const teeth = 9;
+  for (let i = 1; i <= teeth; i++) {
+    const x = cx + W * 0.3 - (W * 0.6 * i) / teeth;
+    g.lineTo(x + (W * 0.6) / teeth / 2, snowY - (i % 2 ? H * 0.035 : H * 0.015));
+    g.lineTo(x, snowY + (i % 2 ? 0 : H * 0.012));
+  }
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
+  g.lineJoin = 'round';
+  g.stroke();
+  g.restore();
+  // Ink outline of the mountain.
+  g.strokeStyle = INK;
+  g.lineWidth = 3;
+  g.lineJoin = 'round';
+  g.stroke(mountain);
+
+  // A few comic clouds around the slopes.
+  const cloud = (x: number, y: number, s: number) => {
+    const puffs: [number, number, number][] = [[0, 0, 1], [-1.1, 0.25, 0.75], [1.1, 0.25, 0.75], [-0.5, -0.45, 0.7], [0.55, -0.4, 0.65]];
+    g.lineWidth = 5;
+    g.strokeStyle = INK;
+    for (const [dx, dy, r] of puffs) {
+      g.beginPath();
+      g.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = '#ffffff';
+    for (const [dx, dy, r] of puffs) {
+      g.beginPath();
+      g.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2);
+      g.fill();
+    }
+  };
+  cloud(W * 0.14, peakY + H * 0.1, 16);
+  cloud(W * 0.86, peakY + H * 0.04, 13);
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D): void {

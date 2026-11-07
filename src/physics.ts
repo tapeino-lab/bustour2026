@@ -208,6 +208,15 @@ export class PieceBody {
     return this.body ? (this.body.getLinearVelocity().y * PX) / 60 : 0;
   }
 
+  /** True while the piece is in contact with anything (another piece or the platform). */
+  get touching(): boolean {
+    if (!this.body) return false;
+    for (let ce = this.body.getContactList(); ce; ce = ce.next ?? null) {
+      if (ce.contact.isTouching()) return true;
+    }
+    return false;
+  }
+
   /** Speed in px per step. */
   get speed(): number {
     if (!this.body) return 0;
