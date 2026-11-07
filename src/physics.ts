@@ -25,6 +25,8 @@ const PX = 30;
 export const PIECE_OUTLINE = 3;
 /** The platform's outline sticks out half its 3px line width. */
 export const PLATFORM_OUTLINE = 1.5;
+/** Skin of parts drawn without an outline (Box2D's usual thin polygon skin), px. */
+const THIN_SKIN = 0.3;
 
 /** Gives a polygon a rounded skin of `px` pixels, the same shape a round-joined stroke draws. */
 function withSkin<T extends { m_radius: number }>(shape: T, px: number): T {
@@ -333,7 +335,7 @@ export class Physics {
         const shape =
           s.kind === 'circle' && s.exact
             ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + (s.noOutline ? 0 : PIECE_OUTLINE)) / PX)
-            : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), PIECE_OUTLINE);
+            : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), s.noOutline ? THIN_SKIN : PIECE_OUTLINE);
         body.createFixture(shape, { density: DENSITY, friction: s.friction ?? FRICTION, restitution: 0 });
       }
       bodies.push(body);
@@ -403,7 +405,7 @@ export class Physics {
         const shape =
           part.kind === 'circle' && part.exact
             ? new Circle(toMain(part.x, part.y), (part.r + (part.noOutline ? 0 : PIECE_OUTLINE)) / PX)
-            : withSkin(new Polygon(shapeOutline(part).map(([x, y]) => toMain(x, y))), PIECE_OUTLINE);
+            : withSkin(new Polygon(shapeOutline(part).map(([x, y]) => toMain(x, y))), part.noOutline ? THIN_SKIN : PIECE_OUTLINE);
         main.createFixture(shape, { density: DENSITY, friction: part.friction ?? FRICTION, restitution: 0 });
       }
       this.world.destroyBody(piece.bodies[i]);

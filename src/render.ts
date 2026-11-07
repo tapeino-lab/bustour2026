@@ -108,6 +108,13 @@ export function drawPiece(
       ctx.stroke();
     });
   }
+  // A photo piece draws its photo (when uploaded) instead of the silhouette parts.
+  const sprite = p.def.sprite;
+  const photo = sprite ? faces.get(p.def.id) : undefined;
+  if (sprite && photo) {
+    inSeg(0, () => ctx.drawImage(photo, sprite.x, sprite.y, sprite.w, sprite.h));
+    return;
+  }
   for (const part of p.def.parts) {
     inSeg(part.seg, () => {
       tracePart(ctx, part);

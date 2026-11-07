@@ -86,6 +86,9 @@ describe('faces', () => {
     await assertSucceeds(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, updatedAt: serverTimestamp() }));
     await assertSucceeds(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, visible: true, updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, visible: 'yes', updatedAt: serverTimestamp() }));
+    // Cut-out photos keep their transparency as PNG; other formats are refused.
+    await assertSucceeds(setDoc(doc(as('admin1'), 'faces/shigemi'), { image: 'data:image/png;base64,iVBORw0KGgo=', updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { image: 'data:image/gif;base64,R0lGOD==', updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('member1'), 'faces/cat'), { image: JPEG, visible: false, updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('member1'), 'faces/dog'), { image: JPEG, updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { image: 'data:text/html;base64,AAAA', updatedAt: serverTimestamp() }));

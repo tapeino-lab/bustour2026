@@ -1,5 +1,5 @@
 import './style.css';
-import { faces, fileToFaceJpeg, setFaces } from './faces';
+import { faces, fileToFaceJpeg, fileToSpritePng, setFaces } from './faces';
 import type { Online, RankingKind, ScoreEntry } from './online';
 import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
@@ -173,6 +173,8 @@ function startGame(): void {
   overEl.classList.add('hidden');
   rotateBtn.classList.remove('hidden');
   game.start();
+  // The music starts again from the beginning with every new game.
+  sound.restartMusic();
   if (tutorialPending) {
     tutorialPending = false;
     startTutorial();
@@ -204,6 +206,7 @@ game.onGameOver = (score, height, tower) => {
   $('new-best').classList.toggle('hidden', !isNew);
   // On a new best the best line would just repeat this game's numbers.
   $('over-best').parentElement!.classList.toggle('hidden', isNew);
+  sound.stopMusic();
   sound.play(isNew && score > 0 ? 'best' : 'over');
   $('ranking').classList.add('hidden');
   if (online && member) void updateRanking(score, height, tower);
@@ -592,7 +595,8 @@ async function showAdmin(): Promise<void> {
         if (!file) return;
         label.textContent = 'ほぞんちゅう…';
         try {
-          const jpeg = await fileToFaceJpeg(file);
+          // Cut-out photos (like しげみ) keep their transparent background.
+          const jpeg = a.sprite ? await fileToSpritePng(file) : await fileToFaceJpeg(file);
           await o.saveFace(a.id, jpeg);
           pic.src = jpeg;
           pic.className = '';

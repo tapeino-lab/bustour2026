@@ -6,7 +6,7 @@ rules_version = '2';
 //   config/join      { code: "<join code>" }   set in the console only; nobody can read it
 //   admins/{uid}     {}                        set in the console only; who can upload faces
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
-//   faces/{pieceId}  { image, visible, updatedAt }  face photo (JPEG data URL); members see it only while visible
+//   faces/{pieceId}  { image, visible, updatedAt }  photo (JPEG, or PNG for cut-outs); members see it only while visible
 //   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
 //   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight? }
 //                    personal bests for the rankings (+ tower snapshots), members only
@@ -96,7 +96,7 @@ service cloud.firestore {
         && (!('visible' in request.resource.data) || request.resource.data.visible is bool)
         && request.resource.data.image is string
         && request.resource.data.image.size() < 200000
-        && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.image.matches('^data:image/(jpeg|png);base64,[A-Za-z0-9+/=]+$')
         && request.resource.data.updatedAt == request.time;
       allow delete: if isAdmin();
     }

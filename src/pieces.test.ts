@@ -17,14 +17,33 @@ function isConvex(pts: [number, number][]): boolean {
 }
 
 describe('pieces', () => {
-  it('has 17 distinct animals and plants (3 cats, 2 sloths) and a bus', () => {
-    expect(ANIMALS).toHaveLength(17);
-    expect(new Set(ALL_PIECES.map((p) => p.id)).size).toBe(18);
+  it('has 18 distinct animals and plants (3 cats, 2 sloths, しげみ) and a bus', () => {
+    expect(ANIMALS).toHaveLength(18);
+    expect(new Set(ALL_PIECES.map((p) => p.id)).size).toBe(19);
     expect(BUS.id).toBe('bus');
   });
 
-  it('gives every animal, and the bus driver, a face spot', () => {
-    for (const a of [...ANIMALS, BUS]) expect(a.face?.r, a.id).toBeGreaterThan(5);
+  it('gives every animal, and the bus driver, a face spot (photo pieces have their own face)', () => {
+    for (const a of [...ANIMALS, BUS]) {
+      if (a.sprite) continue;
+      expect(a.face?.r, a.id).toBeGreaterThan(5);
+    }
+  });
+
+  it('keeps the photo piece (しげみ) about as big as the others, with its outline inside the photo', () => {
+    const p = ANIMALS.find((a) => a.id === 'shigemi')!;
+    const s = p.sprite!;
+    expect(s.h).toBeGreaterThan(70);
+    expect(s.h).toBeLessThan(100);
+    for (const part of p.parts) {
+      if (part.kind !== 'poly') continue;
+      for (const [x, y] of part.points) {
+        expect(x).toBeGreaterThanOrEqual(s.x - 1.5);
+        expect(x).toBeLessThanOrEqual(s.x + s.w + 1.5);
+        expect(y).toBeGreaterThanOrEqual(s.y - 1.5);
+        expect(y).toBeLessThanOrEqual(s.y + s.h + 1.5);
+      }
+    }
   });
 
   it('uses only convex outlines of at most 12 vertices', () => {

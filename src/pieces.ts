@@ -52,6 +52,12 @@ export interface PieceDef {
   details?: Shape[];
   face?: FaceSpot;
   joints?: SoftJoint[];
+  /**
+   * A photo drawn instead of the parts, in this local box. The photo itself is not in the
+   * repository: it is uploaded on the admin page (stored like face photos, members only).
+   * Without it the parts are shown as a plain silhouette.
+   */
+  sprite?: { x: number; y: number; w: number; h: number };
 }
 
 const rect = (x: number, y: number, w: number, h: number, color: string, round = 0, seg = 0): Shape => ({
@@ -61,6 +67,9 @@ const circle = (x: number, y: number, r: number, color: string, seg = 0): Shape 
 const wheel = (x: number, y: number, r: number, color: string): Shape => ({ kind: 'circle', x, y, r, color, exact: true, noOutline: true });
 const poly = (color: string, ...points: [number, number][]): Shape => ({ kind: 'poly', points, color });
 const polySeg = (seg: number, color: string, ...points: [number, number][]): Shape => ({ kind: 'poly', points, color, seg });
+
+/** Part of a photo's silhouette: no ink outline (the photo has its own edges). */
+const sil = (...points: [number, number][]): Shape => ({ kind: 'poly', points, color: '#9aa6b2', noOutline: true });
 
 /** A straight limb (or stem) of width `w` from (x1, y1) to (x2, y2), as a convex quad. */
 function limb(color: string, x1: number, y1: number, x2: number, y2: number, w: number): Shape {
@@ -357,6 +366,26 @@ const RAW_ANIMALS: PieceDef[] = [
     face: { x: 0, y: 0, r: 19 },
   },
   {
+    // A photo of a person (しげみ). Collision follows the photo's outline: a stack of convex
+    // pieces traced from its transparency (arm and phone, head, body and bag, both legs, shoes).
+    id: 'shigemi', name: 'しげみ',
+    parts: [
+      sil([-13.3, -38.9], [-12.2, -39.9], [1.8, -50], [3.9, -50], [6.9, -49], [6.9, -46], [5.9, -39.9], [4.9, -37.9], [-13.3, -37.9]),
+      sil([11.9, -43], [12.9, -44], [19, -46], [25, -46], [27, -45], [29, -43], [30, -39.9], [30, -37.9], [12.9, -37.9], [11.9, -41.9]),
+      sil([-19.3, -33.9], [-17.3, -35.9], [-12.2, -39.9], [30, -39.9], [30, -35.9], [26, -25.8], [-18.3, -25.8], [-19.3, -26.8]),
+      sil([-24.3, -16.8], [-19.3, -27.9], [26, -27.9], [26, -25.8], [25, -17.8], [24, -15.8], [-24.3, -15.8]),
+      sil([-33.4, -7.7], [-23.3, -17.8], [24, -17.8], [24, -15.8], [23, -7.7], [22, -5.7], [-33.4, -5.7]),
+      sil([-33.4, -7.7], [22, -7.7], [22, -5.7], [14.9, 9.4], [-21.3, 9.4], [-25.3, 5.4], [-33.4, -5.7]),
+      sil([-22.3, 7.4], [-10.2, 7.4], [-8.2, 20.5], [-8.2, 21.5], [-9.2, 24.5], [-10.2, 26.5], [-21.3, 26.5], [-22.3, 8.4]),
+      sil([-3.2, 7.4], [13.9, 7.4], [14.9, 8.4], [19, 13.4], [20, 15.4], [20, 20.5], [19, 24.5], [18, 26.5], [9.9, 26.5], [-3.2, 8.4]),
+      sil([-23.3, 38.6], [-21.3, 24.5], [-10.2, 24.5], [-10.2, 26.5], [-15.3, 40.6], [-23.3, 40.6]),
+      sil([8.9, 31.5], [9.9, 24.5], [18, 24.5], [24, 39.6], [24, 40.6], [11.9, 40.6], [9.9, 39.6], [8.9, 38.6]),
+      sil([-23.3, 38.6], [-15.3, 38.6], [-15.3, 47.7], [-16.3, 49.7], [-18.3, 50.7], [-20.3, 50.7], [-22.3, 49.7], [-23.3, 48.7]),
+      sil([9.9, 38.6], [23, 38.6], [24, 39.6], [24, 43.6], [23, 44.6], [16.9, 44.6], [9.9, 39.6]),
+    ],
+    sprite: { x: -35.4, y: -50, w: 70.8, h: 100 },
+  },
+  {
     id: 'leaf', name: 'はっぱ',
     parts: [
       poly('#58b04a', [-40, 0], [-22, -18], [6, -22], [32, -11], [40, 0], [32, 11], [6, 22], [-22, 18]),
@@ -402,6 +431,7 @@ function scaleDef(d: PieceDef, k: number): PieceDef {
     parts: d.parts.map((s) => scaleShape(s, k)),
     details: d.details?.map((s) => scaleShape(s, k)),
     face: d.face && { ...d.face, x: d.face.x * k, y: d.face.y * k, r: d.face.r * k },
+    sprite: d.sprite && { x: d.sprite.x * k, y: d.sprite.y * k, w: d.sprite.w * k, h: d.sprite.h * k },
     joints: d.joints?.map((j) => ({ ...j, x: j.x * k, y: j.y * k })),
   };
 }

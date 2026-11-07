@@ -26,3 +26,25 @@ export async function fileToFaceJpeg(file: File, size = 160, quality = 0.85): Pr
   bitmap.close();
   return c.toDataURL('image/jpeg', quality);
 }
+
+/**
+ * Shrinks a cut-out photo (transparent background) to a PNG data URL, keeping its transparency
+ * and aspect ratio. Gets smaller until it fits the Firestore size limit.
+ */
+export async function fileToSpritePng(file: File, maxH = 300, limit = 190000): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  let h = Math.min(maxH, bitmap.height);
+  let url: string;
+  for (;;) {
+    const w = Math.max(1, Math.round((bitmap.width * h) / bitmap.height));
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    c.getContext('2d')!.drawImage(bitmap, 0, 0, w, h);
+    url = c.toDataURL('image/png');
+    if (url.length < limit || h <= 60) break;
+    h = Math.round(h * 0.85);
+  }
+  bitmap.close();
+  return url;
+}

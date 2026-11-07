@@ -4,9 +4,9 @@
 
 export type SoundName = 'rotate' | 'drop' | 'land' | 'spawn' | 'over' | 'best';
 
-/** Effects are kept modest; the music sits a little lower than them. */
+/** Effects are kept modest; the music sits well below them. */
 const SFX_VOLUME = 0.22;
-const BGM_VOLUME = 0.16;
+const BGM_VOLUME = 0.1;
 
 export class Sound {
   sfxOn = false;
@@ -16,6 +16,8 @@ export class Sound {
   private bgmGain: GainNode | null = null;
   private bgmBuffer: AudioBuffer | null = null;
   private bgmPlayer: AudioBufferSourceNode | null = null;
+  /** True between game over and the next game: the music waits for the next start. */
+  private musicStopped = false;
   /** Loads the music (a data URL) when it is first needed; null when there is none. */
   loadBgm: () => Promise<string | null> = async () => null;
 
@@ -65,14 +67,33 @@ export class Sound {
       const bytes = Uint8Array.from(atob(src.slice(src.indexOf(',') + 1)), (c) => c.charCodeAt(0));
       this.bgmBuffer = await ctx.decodeAudioData(bytes.buffer);
     }
-    if (!this.bgmOn || this.bgmPlayer) return true;
-    const player = ctx.createBufferSource();
+    if (!this.bgmOn || this.bgmPlayer || this.musicStopped) return true;
+    this.startPlayer();
+    return true;
+  }
+
+  /** Stops the music (game over) but keeps the switch on. */
+  stopMusic(): void {
+    this.musicStopped = true;
+    this.bgmPlayer?.stop();
+    this.bgmPlayer = null;
+  }
+
+  /** Plays the music again from the beginning (new game), if the switch is on. */
+  restartMusic(): void {
+    this.musicStopped = false;
+    this.bgmPlayer?.stop();
+    this.bgmPlayer = null;
+    if (this.bgmOn && this.bgmBuffer && this.ctx) this.startPlayer();
+  }
+
+  private startPlayer(): void {
+    const player = this.ctx!.createBufferSource();
     player.buffer = this.bgmBuffer;
     player.loop = true;
     player.connect(this.bgmGain!);
     player.start();
     this.bgmPlayer = player;
-    return true;
   }
 
   play(name: SoundName): void {
