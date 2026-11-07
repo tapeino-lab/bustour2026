@@ -55,7 +55,8 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['code', 'joinedAt'])
         && request.resource.data.code is string
-        && request.resource.data.code == get(/databases/$(database)/documents/config/join).data.code
+        // The console may store the code as text or as a number: compare as text.
+        && request.resource.data.code == string(get(/databases/$(database)/documents/config/join).data.code)
         && request.resource.data.joinedAt == request.time;
       allow list, update, delete: if false;
     }

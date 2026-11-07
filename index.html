@@ -50,8 +50,8 @@
       <section id="join" class="overlay hidden">
         <div class="panel join">
           <h3>さんかコード</h3>
-          <p class="small">コードを いれると みんなの かおが でるよ</p>
-          <input id="join-code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <p class="small">すうじ（4けたまで）を いれると みんなの かおが でるよ</p>
+          <input id="join-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="すうじ" autocomplete="off" autocorrect="off" spellcheck="false" />
           <p id="join-error" class="error hidden">コードが ちがうよ</p>
           <div class="row">
             <button id="join-ok" class="comic-btn">はいる</button>

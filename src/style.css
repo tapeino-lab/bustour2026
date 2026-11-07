@@ -162,7 +162,8 @@ button {
 .small { margin: 4px 0; font-size: 12px; line-height: 1.5; }
 .join { width: min(320px, 90%); }
 .join input {
-  width: 100%;
+  width: 8em;
+  letter-spacing: 0.3em;
   margin: 8px 0 4px;
   padding: 10px 12px;
   border: 3px solid var(--ink);
@@ -176,7 +177,8 @@ button {
 .error { margin: 4px 0; font-size: 14px; color: var(--red); }
 .row { display: flex; gap: 12px; justify-content: center; margin-top: 10px; }
 #join-ok { padding: 10px 24px; font-size: 18px; line-height: 1; background: var(--red); color: #fff; }
-#name-ok { background: var(--red); color: #fff; }
+#name-ok { background: var(--red); color: #fff; min-width: 150px; }
+.namepad .row { margin-top: 18px; }
 .admin { width: min(360px, 94%); max-height: 90%; display: flex; flex-direction: column; }
 .admin code { font-family: monospace; font-size: 11px; -webkit-user-select: all; user-select: all; word-break: break-all; }
 #admin-list { list-style: none; margin: 8px 0; padding: 0; overflow-y: auto; text-align: left; }
@@ -272,7 +274,8 @@ button {
 
 .result-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .result-panel .result { margin: 0; line-height: 1.05; }
-.result-panel .result + .result b { font-size: 34px; }
+.result-panel .result b { font-size: 72px; color: #ff7a1a; }
+.result-panel .result + .result b { font-size: 36px; color: #2f9bff; }
 .my-tower {
   position: relative;
   margin: 6px 0 2px;

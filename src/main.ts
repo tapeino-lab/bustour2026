@@ -433,6 +433,11 @@ $('join-ok').addEventListener('click', async () => {
   $('open-join').classList.add('hidden');
   await becomeMember();
 });
+// Join codes are numbers of up to four digits: drop anything else as it is typed.
+joinInput.addEventListener('input', () => {
+  const digits = joinInput.value.normalize('NFKC').replace(/[^0-9]/g, '').slice(0, 4);
+  if (digits !== joinInput.value) joinInput.value = digits;
+});
 joinInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $('join-ok').click();
 });

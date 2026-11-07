@@ -42,6 +42,13 @@ describe('join code', () => {
   it('lets a device join with the right code', async () => {
     await assertSucceeds(setDoc(doc(as('u1'), 'members/u1'), { code: CODE, joinedAt: serverTimestamp() }));
   });
+  it('accepts the code when the console stored it as a number', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'config/join'), { code: 123 });
+    });
+    await assertSucceeds(setDoc(doc(as('u1'), 'members/u1'), { code: '123', joinedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('u2'), 'members/u2'), { code: '124', joinedAt: serverTimestamp() }));
+  });
   it('rejects a wrong code', async () => {
     await assertFails(setDoc(doc(as('u1'), 'members/u1'), { code: 'nope', joinedAt: serverTimestamp() }));
   });

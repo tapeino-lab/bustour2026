@@ -180,16 +180,6 @@ export function buildBackground(w: number, h: number, k: number): void {
     g.closePath();
     g.fill();
   }
-  // Halftone dots.
-  g.fillStyle = 'rgba(255, 255, 255, 0.35)';
-  g.beginPath();
-  for (let y = 6; y < H; y += 12) {
-    for (let x = 6; x < W; x += 12) {
-      g.moveTo(x + 1.6, y);
-      g.arc(x, y, 1.6, 0, Math.PI * 2);
-    }
-  }
-  g.fill();
   background = c;
 
   const f = scenery ?? document.createElement('canvas');

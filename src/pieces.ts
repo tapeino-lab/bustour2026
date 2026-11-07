@@ -88,6 +88,18 @@ function fuzz(x1: number, y1: number, x2: number, y2: number): Shape[] {
   return out;
 }
 
+/** A spiral line of dots around (cx, cy), out to radius `maxR` over `turns` turns (drawn only). */
+function spiral(cx: number, cy: number, maxR: number, turns: number, color: string): Shape[] {
+  const out: Shape[] = [];
+  const total = Math.PI * 2 * turns;
+  for (let t = 0.4; t <= total; ) {
+    const r = 1.5 + (maxR - 1.5) * (t / total);
+    out.push({ kind: 'circle', x: cx + r * Math.cos(t), y: cy + r * Math.sin(t), r: 1.7, color });
+    t += 2.2 / Math.max(r, 2); // about one dot every 2 px along the line
+  }
+  return out;
+}
+
 /** Three little toes under a foot at (x, y) (drawn only). */
 function toes(x: number, y: number, color: string, seg = 0): Shape[] {
   return [-3.5, 0, 3.5].map((dx) => ({ kind: 'circle' as const, x: x + dx, y, r: 2.4, color, seg }));
@@ -206,8 +218,8 @@ export const ANIMALS: PieceDef[] = [
     ],
     face: { x: -38, y: -6, r: 14 },
   },
-  slothDef('sloth', 'なまけもの（ちゃいろ）', '#9c8466', '#7c664b', '#c9b48f'),
-  slothDef('graysloth', 'なまけもの（はいいろ）', '#9a9a8c', '#76766a', '#d0cfc0'),
+  slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
+  slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
     // Soft: head, body and tail are joined by springy welds, so it sags a little like the real thing.
     id: 'axolotl', name: 'うーぱーるーぱー',
@@ -240,29 +252,31 @@ export const ANIMALS: PieceDef[] = [
     face: { x: 0, y: -24, r: 11 },
   },
   {
-    // Foxtails (ねこじゃらし) growing from a little tuft that holds the face.
+    // One foxtail (ねこじゃらし) growing from a little tuft that holds the face.
     id: 'weed', name: 'ざっそう',
     parts: [
-      limb('#7a9a2e', -6, 8, -16, -40, 4),
-      limb('#7a9a2e', 0, 6, 2, -48, 4),
-      limb('#7a9a2e', 6, 8, 16, -40, 4),
-      capsule('#b9c94a', -16, -38, -26, -68, 13),
-      capsule('#b9c94a', 2, -46, 3, -78, 13),
-      capsule('#b9c94a', 16, -38, 26, -68, 13),
+      limb('#7a9a2e', 0, 6, 4, -44, 4),
+      capsule('#b9c94a', 4, -42, 10, -76, 14),
       circle(0, 18, 16, '#6aa33a'),
     ],
-    details: [...fuzz(-16, -38, -26, -68), ...fuzz(2, -46, 3, -78), ...fuzz(16, -38, 26, -68)],
+    details: fuzz(4, -42, 10, -76),
     face: { x: 0, y: 18, r: 13 },
   },
   {
+    // Like a bat emblem: wings spread wide, standing on the pointed wing tips.
     id: 'flyingfox', name: 'おおこうもり',
     parts: [
-      rect(0, 8, 24, 40, '#6b4a34', 11),
+      poly('#2f2630', [-8, -16], [-40, -26], [-64, -12], [-62, 30], [-10, 12]),
+      poly('#2f2630', [8, -16], [40, -26], [64, -12], [62, 30], [10, 12]),
+      rect(0, 2, 24, 34, '#6b4a34', 11),
       circle(0, -20, 15, '#8a5a3a'),
-      poly('#8a5a3a', [-13, -30], [-11, -43], [-4, -33]),
-      poly('#8a5a3a', [4, -33], [11, -43], [13, -30]),
-      poly('#3b2e2e', [-10, -4], [-56, -12], [-50, 18], [-10, 20]),
-      poly('#3b2e2e', [10, -4], [56, -12], [50, 18], [10, 20]),
+      poly('#8a5a3a', [-13, -30], [-11, -44], [-4, -33]),
+      poly('#8a5a3a', [4, -33], [11, -44], [13, -30]),
+    ],
+    details: [
+      // Wing bones.
+      limb('#5a4e5c', -12, -12, -60, 26, 2), limb('#5a4e5c', -12, -12, -40, -22, 2), limb('#5a4e5c', -12, -8, -36, 18, 2),
+      limb('#5a4e5c', 12, -12, 60, 26, 2), limb('#5a4e5c', 12, -12, 40, -22, 2), limb('#5a4e5c', 12, -8, 36, 18, 2),
     ],
     face: { x: 0, y: -20, r: 12 },
   },
@@ -282,8 +296,7 @@ export const ANIMALS: PieceDef[] = [
   {
     id: 'squirrel', name: 'りす',
     parts: [
-      circle(24, -10, 19, '#c98a50'),
-      circle(30, -30, 12, '#c98a50'),
+      circle(26, -16, 22, '#c98a50'),
       circle(-2, 14, 16, '#b5743d'),
       circle(-14, -10, 17, '#b5743d'),
       circle(-26, -27, 6, '#b5743d'),
@@ -293,17 +306,18 @@ export const ANIMALS: PieceDef[] = [
     details: [
       circle(-26, -27, 3, '#f2c9a0'), circle(-4, -29, 3, '#f2c9a0'),
       rect(-2, 18, 14, 16, '#f0d8b4', 7),
-      rect(26, -14, 4, 20, '#e0a870', 2),
+      // A curly, swirly tail.
+      ...spiral(26, -16, 17, 2.2, '#8f5a2c'),
     ],
     face: { x: -14, y: -10, r: 13 },
   },
   {
     id: 'capybara', name: 'かぴばら',
     parts: [
-      rect(6, 6, 76, 38, '#a07a52', 16),
-      rect(-40, -8, 34, 32, '#a07a52', 12),
-      circle(-32, -27, 5, '#8a6542'),
-      rect(-16, 28, 12, 12, '#8a6542', 4), rect(28, 28, 12, 12, '#8a6542', 4),
+      rect(6, 6, 76, 38, '#d9b97f', 16),
+      rect(-40, -8, 34, 32, '#d9b97f', 12),
+      circle(-32, -27, 5, '#b8945a'),
+      rect(-16, 28, 12, 12, '#b8945a', 4), rect(28, 28, 12, 12, '#b8945a', 4),
     ],
     face: { x: -40, y: -8, r: 13 },
   },
