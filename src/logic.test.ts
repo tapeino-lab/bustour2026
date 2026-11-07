@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SettleTracker, heightMeters, pieceIdForIndex } from './logic';
+import { SettleTracker, formatHeight, heightMeters, pieceIdForIndex } from './logic';
 import { ANIMALS, BUS } from './pieces';
 
 describe('pieceIdForIndex', () => {
@@ -22,10 +22,17 @@ describe('pieceIdForIndex', () => {
 });
 
 describe('heightMeters', () => {
-  it('converts pixels to metres with one decimal', () => {
+  it('converts pixels to metres with two decimals', () => {
     expect(heightMeters(0)).toBe(0);
     expect(heightMeters(-10)).toBe(0);
     expect(heightMeters(125)).toBe(2.5);
+    expect(heightMeters(126.9)).toBe(2.53);
+  });
+  it('shows one decimal, cut off', () => {
+    expect(formatHeight(2.53)).toBe('2.5');
+    expect(formatHeight(9.96)).toBe('9.9');
+    expect(formatHeight(4.2)).toBe('4.2');
+    expect(formatHeight(0)).toBe('0.0');
   });
 });
 

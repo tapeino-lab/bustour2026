@@ -15,9 +15,16 @@ export const DUMMY_ROWS: RankingRow[] = [
   uid: `dummy${i}`, name: name as string, count: count as number, height: height as number, dummy: true,
 }));
 
-/** Real entries mixed with the dummies, best first (a real entry wins a tie), cut to `size`. */
+/**
+ * Real entries mixed with the dummies, best first, cut to `size`. A tie goes to the better other
+ * value (height for the count ranking and the other way round), then to a real entry over a
+ * dummy, then to whoever set the record first.
+ */
 export function topRows(real: ScoreEntry[], kind: RankingKind, size = RANKING_ROWS): RankingRow[] {
+  const other: RankingKind = kind === 'count' ? 'height' : 'count';
+  const at = (r: RankingRow) => (kind === 'count' ? r.countAt : r.heightAt) ?? Infinity;
   const rows: RankingRow[] = [...real, ...DUMMY_ROWS];
-  // Array.prototype.sort is stable, so on equal values real entries (listed first) stay ahead.
-  return rows.sort((a, b) => b[kind] - a[kind]).slice(0, size);
+  return rows
+    .sort((a, b) => b[kind] - a[kind] || b[other] - a[other] || Number(!!a.dummy) - Number(!!b.dummy) || at(a) - at(b))
+    .slice(0, size);
 }

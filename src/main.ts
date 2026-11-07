@@ -1,6 +1,6 @@
 import './style.css';
 import { faces, fileToFaceJpeg, fileToSpritePng, setFaces } from './faces';
-import type { Online, RankingKind, ScoreEntry } from './online';
+import type { NewRecords, Online, RankingKind, ScoreEntry } from './online';
 import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
@@ -10,6 +10,7 @@ import {
   KANA_COLUMNS, NAME_LENGTH, isValidName, toggleDakuten, toggleHandakuten, toggleSmall, typeKana,
 } from './names';
 import { topRows, type RankingRow } from './ranking';
+import { formatHeight } from './logic';
 import { decodeTower, towerBodies, towerBreaker } from './tower';
 import { drawTowerImage } from './render';
 import { fetchLatestVersion, reloadToVersion } from './update';
@@ -200,9 +201,9 @@ game.onGameOver = (score, height, tower) => {
     saveBestHeight(bestHeight);
   }
   $('over-score').textContent = String(score);
-  $('over-height').textContent = height.toFixed(1);
+  $('over-height').textContent = formatHeight(height);
   $('over-best').textContent = String(best);
-  $('over-best-height').textContent = bestHeight.toFixed(1);
+  $('over-best-height').textContent = formatHeight(bestHeight);
   $('new-best').classList.toggle('hidden', !isNew);
   // On a new best the best line would just repeat this game's numbers.
   $('over-best-block').classList.toggle('hidden', isNew);
@@ -398,10 +399,16 @@ $('name-ok').addEventListener('click', () => {
 });
 $('name-skip').addEventListener('click', () => closeName(null));
 
-async function saveEntry(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
+async function saveEntry(entry: Omit<ScoreEntry, 'uid'>, records: NewRecords = {}): Promise<void> {
   if (!online) return;
-  await online.saveScore(entry);
-  myEntry = { uid: online.uid, ...entry };
+  await online.saveScore(entry, records);
+  const now = Date.now();
+  myEntry = {
+    uid: online.uid,
+    ...entry,
+    countAt: records.count ? now : myEntry?.countAt,
+    heightAt: records.height ? now : myEntry?.heightAt,
+  };
   saveName(entry.name);
 }
 
@@ -423,7 +430,7 @@ async function updateRanking(score: number, height: number, tower: string): Prom
           // Each record keeps the tower of the game that set it.
           towerCount: countUp ? tower : myEntry?.towerCount,
           towerHeight: heightUp ? tower : myEntry?.towerHeight,
-        });
+        }, { count: countUp, height: heightUp });
       }
     }
   } catch {
@@ -472,13 +479,13 @@ function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): 
     const val = document.createElement('span');
     val.className = 'val';
     // In the list the count has no unit (the column header says こすう); the viewer title keeps it.
-    val.textContent = kind === 'height' ? r.height.toFixed(1) : `${r.count}`;
+    val.textContent = kind === 'height' ? formatHeight(r.height) : `${r.count}`;
     if (kind === 'height') {
       const unit = document.createElement('small');
       unit.textContent = 'm';
       val.appendChild(unit);
     }
-    const record = kind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
+    const record = kind === 'height' ? `${formatHeight(r.height)}m` : `${r.count}こ`;
     let slot: HTMLElement = document.createElement('span');
     if (tower && i < THUMBS) {
       const thumb = document.createElement('canvas');

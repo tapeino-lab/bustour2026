@@ -4,7 +4,7 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
   collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
-  serverTimestamp, setDoc, where, writeBatch, type Firestore,
+  serverTimestamp, setDoc, Timestamp, where, writeBatch, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 
@@ -27,6 +27,31 @@ export interface ScoreEntry {
   /** Tower snapshots (tower.ts) of the games that set the count / height records. */
   towerCount?: string;
   towerHeight?: string;
+  /** When the count / height record was set (ms); breaks ties after the other value. */
+  countAt?: number;
+  heightAt?: number;
+}
+
+/** Which records a save sets (their time is stamped by the server). */
+export interface NewRecords {
+  count?: boolean;
+  height?: boolean;
+}
+
+function toEntry(uid: string, data: Record<string, unknown>): ScoreEntry {
+  const millis = (t: unknown) => (t instanceof Timestamp ? t.toMillis() : undefined);
+  // Entries saved before record times existed fall back to their last update.
+  const updated = millis(data.updatedAt);
+  return {
+    uid,
+    name: data.name as string,
+    count: data.count as number,
+    height: data.height as number,
+    towerCount: data.towerCount as string | undefined,
+    towerHeight: data.towerHeight as string | undefined,
+    countAt: millis(data.countAt) ?? updated,
+    heightAt: millis(data.heightAt) ?? updated,
+  };
 }
 
 export type RankingKind = 'height' | 'count';
@@ -117,22 +142,33 @@ export class Online {
   /** This device's ranking entry, or null if it has none yet. */
   async myScore(): Promise<ScoreEntry | null> {
     const d = await getDoc(doc(this.db, 'scores', this.uid));
-    return d.exists() ? { uid: this.uid, ...(d.data() as Omit<ScoreEntry, 'uid'>) } : null;
+    return d.exists() ? toEntry(this.uid, d.data()) : null;
   }
 
-  /** Saves the entry (the caller keeps count/height at their personal bests). */
-  async saveScore(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
+  /**
+   * Saves the entry (the caller keeps count/height at their personal bests). Merged, so the time
+   * of a record that did not change stays as it was.
+   */
+  async saveScore(entry: Omit<ScoreEntry, 'uid'>, records: NewRecords = {}): Promise<void> {
     // Firestore rejects undefined fields, so leave out snapshots we do not have.
     const data: Record<string, unknown> = { name: entry.name, count: entry.count, height: entry.height };
     if (entry.towerCount) data.towerCount = entry.towerCount;
     if (entry.towerHeight) data.towerHeight = entry.towerHeight;
-    await setDoc(doc(this.db, 'scores', this.uid), { ...data, updatedAt: serverTimestamp() });
+    if (records.count) data.countAt = serverTimestamp();
+    if (records.height) data.heightAt = serverTimestamp();
+    await setDoc(doc(this.db, 'scores', this.uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
   }
 
-  /** Top entries for one ranking, best first. */
+  /** Top entries for one ranking, best first (ties are ordered in ranking.ts). */
   async ranking(kind: RankingKind): Promise<ScoreEntry[]> {
-    const snap = await getDocs(query(collection(this.db, 'scores'), orderBy(kind, 'desc'), limit(RANKING_SIZE)));
-    return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<ScoreEntry, 'uid'>) }));
+    const scores = collection(this.db, 'scores');
+    let snap = await getDocs(query(scores, orderBy(kind, 'desc'), limit(RANKING_SIZE)));
+    // Players tied with the last one fetched may still rank above it (see ranking.ts), so fetch them too.
+    if (snap.size === RANKING_SIZE) {
+      const last = snap.docs[snap.size - 1].get(kind) as number;
+      snap = await getDocs(query(scores, where(kind, '>=', last), orderBy(kind, 'desc')));
+    }
+    return snap.docs.map((d) => toEntry(d.id, d.data()));
   }
 
   /** Background music as a data URL, or null if none has been uploaded. */

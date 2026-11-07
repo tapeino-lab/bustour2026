@@ -137,13 +137,30 @@ describe('scores', () => {
     await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), towerCount: 5 }));
   });
   it('lets bests only go up', async () => {
-    await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('ばすた', 6, 2.5)));
-    await assertSucceeds(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.1)));
-    await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 5, 3.1)));
-    await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.0)));
+    const ref = doc(as('member2'), 'scores/member2');
+    await assertSucceeds(setDoc(ref, { ...score('ばすた', 6, 2.5), countAt: serverTimestamp() }, { merge: true }));
+    await assertSucceeds(setDoc(ref, { ...score('なまえ', 6, 3.1), heightAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, score('なまえ', 5, 3.1), { merge: true }));
+    await assertFails(setDoc(ref, score('なまえ', 6, 3.0), { merge: true }));
     await assertFails(deleteDoc(doc(as('member2'), 'scores/member2')));
     // Ranking reset: only admins can delete entries.
     await assertSucceeds(deleteDoc(doc(as('admin1'), 'scores/member2')));
+  });
+  it('stamps a record time only when that record goes up', async () => {
+    const ref = doc(as('member2'), 'scores/member2');
+    // Old entries have no record times: they may stay without them.
+    await assertSucceeds(setDoc(ref, { name: 'なまえ', updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { count: 6, updatedAt: serverTimestamp() }, { merge: true }));
+    await assertSucceeds(setDoc(ref, { count: 6, countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    // An unchanged record keeps its time: it cannot be moved, earlier or later.
+    await assertFails(setDoc(ref, { countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { countAt: new Date(0), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertSucceeds(setDoc(ref, { height: 3, heightAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { height: 4, heightAt: new Date(0), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertSucceeds(setDoc(ref, { name: 'ばす', updatedAt: serverTimestamp() }, { merge: true }));
+    // A new entry may only carry times of now.
+    await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.25), countAt: serverTimestamp(), heightAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), countAt: new Date(0) }));
   });
   it('rankings are readable by members only', async () => {
     const top = (uid: string) => getDocs(query(collection(as(uid), 'scores'), orderBy('height', 'desc'), limit(20)));

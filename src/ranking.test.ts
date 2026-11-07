@@ -25,4 +25,19 @@ describe('rankings with dummies', () => {
     expect(byHeight[0].uid).toBe('a');
     expect(byHeight.map((r) => r.uid)).not.toContain('b');
   });
+  it('breaks ties by the other value, then by who set the record first', () => {
+    const real = [
+      { uid: 'late', name: 'おそい', count: 8, height: 4.21, countAt: 300, heightAt: 300 },
+      { uid: 'low', name: 'ひくい', count: 8, height: 3.5, countAt: 100, heightAt: 100 },
+      { uid: 'early', name: 'はやい', count: 8, height: 4.21, countAt: 200, heightAt: 200 },
+      { uid: 'few', name: 'すこし', count: 7, height: 4.21, countAt: 50, heightAt: 50 },
+    ];
+    expect(topRows(real, 'count').slice(0, 4).map((r) => r.uid)).toEqual(['early', 'late', 'low', 'few']);
+    expect(topRows(real, 'height').slice(0, 4).map((r) => r.uid)).toEqual(['early', 'late', 'few', 'low']);
+  });
+  it('keeps a real entry ahead of a dummy with the same values', () => {
+    const d = DUMMY_ROWS[0];
+    const rows = topRows([{ uid: 'r', name: 'ほんと', count: d.count, height: d.height }], 'count');
+    expect(rows[0].uid).toBe('r');
+  });
 });

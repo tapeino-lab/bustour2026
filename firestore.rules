@@ -8,8 +8,9 @@ rules_version = '2';
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
 //   faces/{pieceId}  { image, visible, updatedAt }  photo (JPEG, or PNG for cut-outs); members see it only while visible
 //   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
-//   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight? }
-//                    personal bests for the rankings (+ tower snapshots), members only
+//   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight?, countAt?, heightAt? }
+//                    personal bests for the rankings (+ tower snapshots and when each record was set),
+//                    members only
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -27,7 +28,7 @@ service cloud.firestore {
     }
     function validScore(d) {
       return d.keys().hasAll(['name', 'count', 'height', 'updatedAt'])
-        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt', 'towerCount', 'towerHeight'])
+        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt', 'towerCount', 'towerHeight', 'countAt', 'heightAt'])
         && validTower(d, 'towerCount')
         && validTower(d, 'towerHeight')
         && d.name is string
@@ -35,6 +36,17 @@ service cloud.firestore {
         && d.count is int && d.count >= 0 && d.count <= 1000
         && d.height is number && d.height >= 0 && d.height <= 1000
         && d.updatedAt == request.time;
+    }
+    // When a record was set (breaks ties): stamped now when the record goes up, otherwise unchanged.
+    function newRecordTime(key) {
+      return !(key in request.resource.data) || request.resource.data[key] == request.time;
+    }
+    function recordTime(key, valueKey) {
+      let d = request.resource.data;
+      let old = resource.data;
+      return d[valueKey] > old[valueKey]
+        ? (key in d && d[key] == request.time)
+        : (key in old ? (key in d && d[key] == old[key]) : !(key in d));
     }
 
     // The join code itself is never readable by any client.
@@ -65,10 +77,12 @@ service cloud.firestore {
     // Rankings: one doc per device (its uid). Bests may only go up; the name may change.
     match /scores/{uid} {
       allow read: if isMember() || isAdmin();
-      allow create: if isMember() && request.auth.uid == uid && validScore(request.resource.data);
+      allow create: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
+        && newRecordTime('countAt') && newRecordTime('heightAt');
       allow update: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
         && request.resource.data.count >= resource.data.count
-        && request.resource.data.height >= resource.data.height;
+        && request.resource.data.height >= resource.data.height
+        && recordTime('countAt', 'count') && recordTime('heightAt', 'height');
       // Only admins may delete (ranking reset from the admin page).
       allow delete: if isAdmin();
     }

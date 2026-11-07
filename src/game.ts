@@ -1,4 +1,4 @@
-import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
+import { SettleTracker, clamp, formatHeight, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
@@ -310,7 +310,7 @@ export class Game {
     ctx.fillText(`${this.score}`, cx, 54);
     ctx.fillStyle = INK;
     ctx.font = `11px ${FONT}`;
-    ctx.fillText(`たかさ ${this.heightM.toFixed(1)}m`, cx, 72);
+    ctx.fillText(`たかさ ${formatHeight(this.heightM)}m`, cx, 72);
     ctx.font = `11px ${FONT}`;
     ctx.fillText('つぎ', WORLD_WIDTH - 53, 27);
 

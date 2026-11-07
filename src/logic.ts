@@ -16,8 +16,14 @@ export function pieceIdForIndex(n: number, rand: () => number, prevId?: string):
   return choices[i].id;
 }
 
+/** Tower height in metres, kept to two decimals (shown with one, see formatHeight). */
 export function heightMeters(px: number): number {
-  return Math.max(0, Math.floor((px / PX_PER_METER) * 10) / 10);
+  return Math.max(0, Math.floor((px / PX_PER_METER) * 100) / 100);
+}
+
+/** A height for display: one decimal, cut off (not rounded) so 9.96m does not show as 10.0. */
+export function formatHeight(m: number): string {
+  return (Math.floor(Math.round(m * 100) / 10) / 10).toFixed(1);
 }
 
 export interface Motion {
