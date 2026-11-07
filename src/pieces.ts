@@ -29,6 +29,9 @@ export interface SoftJoint {
   b: number;
   x: number;
   y: number;
+  /** Stiffness (Hz; lower = floppier) and damping (1 = no wobble, lower = wobbles a bit). */
+  hz?: number;
+  damping?: number;
 }
 
 export interface PieceDef {
@@ -221,22 +224,31 @@ export const ANIMALS: PieceDef[] = [
   slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
-    // Soft: head, body and tail are joined by springy welds, so it sags a little like the real thing.
+    // Very soft: head, front and back body, tail and the two legs are separate bodies joined by
+    // floppy welds, so it flops and sags like the real thing; the legs wobble a little.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
-      circle(-36, 0, 18, '#f7a8c4', 0),
-      polySeg(0, '#e57aa3', [-46, -12], [-60, -24], [-54, -29], [-42, -16]),
-      polySeg(0, '#e57aa3', [-38, -17], [-40, -34], [-33, -34], [-31, -17]),
-      polySeg(0, '#e57aa3', [-26, -13], [-17, -28], [-12, -24], [-21, -11]),
-      rect(0, 6, 46, 22, '#f7a8c4', 11, 1),
-      rect(-16, 22, 7, 12, '#f7a8c4', 3, 1), rect(18, 22, 7, 12, '#f7a8c4', 3, 1),
-      polySeg(2, '#f7a8c4', [20, -2], [58, 2], [62, 10], [20, 16]),
+      circle(-40, 0, 18, '#f7a8c4', 0),
+      polySeg(0, '#e57aa3', [-50, -12], [-64, -24], [-58, -29], [-46, -16]),
+      polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
+      polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
+      rect(-12, 6, 32, 22, '#f7a8c4', 11, 1),
+      rect(16, 6, 32, 22, '#f7a8c4', 11, 2),
+      polySeg(3, '#f7a8c4', [30, -2], [66, 2], [70, 10], [30, 16]),
+      rect(-22, 24, 8, 14, '#f7a8c4', 3, 4),
+      rect(26, 24, 8, 14, '#f7a8c4', 3, 5),
     ],
-    details: [...toes(-16, 30, '#e57aa3', 1), ...toes(18, 30, '#e57aa3', 1), polySeg(2, '#fbd0df', [26, 0], [56, 3], [56, 6], [26, 4])],
-    face: { x: -36, y: 0, r: 14, seg: 0 },
+    details: [
+      ...toes(-22, 32, '#e57aa3', 4), ...toes(26, 32, '#e57aa3', 5),
+      polySeg(3, '#fbd0df', [36, 0], [64, 3], [64, 6], [36, 4]),
+    ],
+    face: { x: -40, y: 0, r: 14, seg: 0 },
     joints: [
-      { a: 0, b: 1, x: -21, y: 4 },
-      { a: 1, b: 2, x: 21, y: 6 },
+      { a: 0, b: 1, x: -26, y: 4, hz: 2.4, damping: 1 },
+      { a: 1, b: 2, x: 2, y: 6, hz: 2.2, damping: 1 },
+      { a: 2, b: 3, x: 31, y: 6, hz: 2.4, damping: 1 },
+      { a: 1, b: 4, x: -22, y: 18, hz: 2.2, damping: 0.35 },
+      { a: 2, b: 5, x: 26, y: 18, hz: 2.2, damping: 0.35 },
     ],
   },
   {

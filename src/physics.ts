@@ -313,7 +313,16 @@ export class Physics {
     for (const j of piece.def.joints ?? []) {
       const anchor = piece.localToWorld(j.x, j.y);
       this.world.createJoint(
-        new WeldJoint({ ...SOFT_WELD, collideConnected: false }, bodies[j.a], bodies[j.b], new Vec2(anchor.x / PX, anchor.y / PX)),
+        new WeldJoint(
+          {
+            frequencyHz: j.hz ?? SOFT_WELD.frequencyHz,
+            dampingRatio: j.damping ?? SOFT_WELD.dampingRatio,
+            collideConnected: false,
+          },
+          bodies[j.a],
+          bodies[j.b],
+          new Vec2(anchor.x / PX, anchor.y / PX),
+        ),
       );
     }
     piece.bodies = bodies;

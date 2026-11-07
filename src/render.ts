@@ -211,18 +211,8 @@ function drawFuji(g: CanvasRenderingContext2D, W: number, H: number): void {
   body.addColorStop(1, '#7d9be0');
   g.fillStyle = body;
   g.fill(mountain);
-  // Darker halftone inside the mountain.
   g.save();
   g.clip(mountain);
-  g.fillStyle = 'rgba(20, 30, 70, 0.18)';
-  g.beginPath();
-  for (let y = peakY; y < H; y += 10) {
-    for (let x = (y / 10) % 2 ? 0 : 5; x < W; x += 10) {
-      g.moveTo(x + 1.8, y);
-      g.arc(x, y, 1.8, 0, Math.PI * 2);
-    }
-  }
-  g.fill();
   // Snow cap with a jagged lower edge.
   const snowY = peakY + H * 0.11;
   g.beginPath();

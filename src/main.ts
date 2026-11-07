@@ -113,7 +113,13 @@ function toLogicalX(e: PointerEvent): number {
 
 // Only the first finger moves the piece. Any further finger that touches the screen rotates it.
 let dragPointer: number | null = null;
+// PC: right click rotates (and never opens the browser menu).
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button === 2) {
+    game.rotate();
+    return;
+  }
   tutorial.setPaused(true);
   if (dragPointer !== null) {
     game.rotate();
@@ -186,6 +192,8 @@ game.onGameOver = (score, height, tower) => {
   $('over-best').textContent = String(best);
   $('over-best-height').textContent = bestHeight.toFixed(1);
   $('new-best').classList.toggle('hidden', !isNew);
+  // On a new best the best line would just repeat this game's numbers.
+  $('over-best').parentElement!.classList.toggle('hidden', isNew);
   sound.play(isNew && score > 0 ? 'best' : 'over');
   $('ranking').classList.add('hidden');
   if (online && member) void updateRanking(score, height, tower);
@@ -222,17 +230,8 @@ bgmToggle.addEventListener('click', async () => {
 // ---- Online: join code, face photos, admin upload -------------------------------------------
 let online: Online | null = null;
 let member = false;
-const JOIN_LATER_KEY = 'bustour2026.joinLater';
 const joinEl = $('join');
 const joinInput = $<HTMLInputElement>('join-code');
-
-function joinLater(): boolean {
-  try {
-    return localStorage.getItem(JOIN_LATER_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
 
 function showOverlay(el: HTMLElement, show: boolean): void {
   el.classList.toggle('hidden', !show);
@@ -472,14 +471,7 @@ joinInput.addEventListener('input', () => {
 joinInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $('join-ok').click();
 });
-$('join-later').addEventListener('click', () => {
-  try {
-    localStorage.setItem(JOIN_LATER_KEY, '1');
-  } catch {
-    // Without storage the question simply comes back next time.
-  }
-  showOverlay(joinEl, false);
-});
+$('join-later').addEventListener('click', () => showOverlay(joinEl, false));
 $('open-join').addEventListener('click', showJoin);
 
 async function showAdmin(): Promise<void> {
@@ -573,7 +565,8 @@ async function initOnline(): Promise<void> {
   if (!online) return;
   member = await online.isMember().catch(() => false);
   if (member) await becomeMember().catch(() => undefined);
-  else if (!joinLater()) showJoin();
+  // Devices without the code are asked at every launch.
+  else showJoin();
   if (params.get('admin') === '1') await showAdmin().catch(() => undefined);
 }
 
