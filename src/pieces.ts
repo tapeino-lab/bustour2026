@@ -243,8 +243,8 @@ const RAW_ANIMALS: PieceDef[] = [
   slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
-    // Very soft: head, tail and the two legs hang off the body on floppy welds, so it flops down
-    // like the real thing and its legs splay out a little.
+    // Very soft: the head hangs off the body on a floppy weld, the tail (base and tip) and the two
+    // legs on hinges, so it flops down like the real thing and its legs splay out a little.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
       circle(-40, 0, 18, '#f7a8c4', 0),
@@ -252,7 +252,9 @@ const RAW_ANIMALS: PieceDef[] = [
       polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
       polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
       rect(2, 6, 60, 22, '#f7a8c4', 11, 1),
-      polySeg(2, '#f7a8c4', [30, -2], [66, 2], [70, 10], [30, 16]),
+      // The tail in two pieces (base and tip), so it bends in the middle.
+      polySeg(2, '#f7a8c4', [30, -2], [50, 0], [50, 13], [30, 16]),
+      polySeg(7, '#f7a8c4', [49, 0], [66, 2], [70, 10], [49, 13]),
       // Each leg has a knee: thigh and shin, already bent outwards, so under the body's weight the
       // knees give way outwards and the legs splay open. Slippery feet help them slide out.
       { ...limb('#f7a8c4', -20, 15, -28, 26, 8), seg: 3 },
@@ -262,12 +264,15 @@ const RAW_ANIMALS: PieceDef[] = [
     ],
     details: [
       ...toes(-42, 36, '#e57aa3', 4), ...toes(46, 36, '#e57aa3', 6),
-      polySeg(2, '#fbd0df', [36, 0], [64, 3], [64, 6], [36, 4]),
+      polySeg(2, '#fbd0df', [36, 0], [50, 1.5], [50, 4.5], [36, 4]),
+      polySeg(7, '#fbd0df', [50, 1.5], [64, 3], [64, 6], [50, 4.5]),
     ],
     face: { x: -40, y: 0, r: 14, seg: 0 },
     joints: [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
-      { a: 1, b: 2, x: 31, y: 6, hz: 2, damping: 1 },
+      // The tail droops but never stands up: both its joints bend mostly downwards.
+      { a: 1, b: 2, x: 31, y: 6, hinge: [-0.1, 0.45] },
+      { a: 2, b: 7, x: 50, y: 6, hinge: [-0.1, 0.6] },
       // Hips and knees only bend outwards: the front leg to the left, the back leg to the right.
       { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0] },
       { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0] },
