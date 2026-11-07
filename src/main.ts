@@ -1,7 +1,7 @@
 import './style.css';
 import { faces, fileToFaceJpeg, setFaces } from './faces';
 import type { Online, RankingKind, ScoreEntry } from './online';
-import { ANIMALS } from './pieces';
+import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
 import { buildBackground } from './render';
@@ -455,7 +455,7 @@ async function showAdmin(): Promise<void> {
   list.replaceChildren();
   if (admin) {
     const current = await o.loadFaces();
-    for (const a of ANIMALS) {
+    for (const a of ALL_PIECES) {
       const li = document.createElement('li');
       const pic = document.createElement('img');
       pic.alt = '';

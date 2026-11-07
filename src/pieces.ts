@@ -207,6 +207,8 @@ export const BUS: PieceDef = {
     rect(0, 8, 160, 5, '#7d8893', 2),
     circle(-48, 26, 4, '#bbbbbb'), circle(48, 26, 4, '#bbbbbb'),
   ],
+  // The driver, in the front (left) window.
+  face: { x: -64, y: -10, r: 10 },
 };
 
 export const ALL_PIECES: PieceDef[] = [...ANIMALS, BUS];

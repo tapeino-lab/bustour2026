@@ -23,8 +23,8 @@ describe('pieces', () => {
     expect(BUS.id).toBe('bus');
   });
 
-  it('gives every animal a face spot', () => {
-    for (const a of ANIMALS) expect(a.face?.r).toBeGreaterThan(5);
+  it('gives every animal, and the bus driver, a face spot', () => {
+    for (const a of [...ANIMALS, BUS]) expect(a.face?.r, a.id).toBeGreaterThan(5);
   });
 
   it('uses only convex outlines of at most 12 vertices', () => {
