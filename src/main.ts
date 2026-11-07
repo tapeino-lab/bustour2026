@@ -68,7 +68,8 @@ function startTutorial(): void {
 let pendingUpdate: string | null = null;
 
 // Diagnostics are on by default until release; ?debug=0 hides them.
-// Diagnostics: shown only on admin devices (decided after sign-in), or with ?debug=1; ?debug=0 hides them.
+// Diagnostics: shown only when an admin device opens the game with ?admin=1 (otherwise everyone,
+// admins included, plays as an ordinary user), or with ?debug=1; ?debug=0 hides them.
 let debug: DebugOverlay | null = params.get('debug') === '1' ? new DebugOverlay(app) : null;
 function showDiagnostics(): void {
   if (!debug && params.get('debug') !== '0') debug = new DebugOverlay(app);
@@ -118,12 +119,14 @@ function toLogicalX(e: PointerEvent): number {
 // Only the first finger moves the piece. Any further finger that touches the screen rotates it.
 let dragPointer: number | null = null;
 // PC: right click rotates (and never opens the browser menu).
+// mousedown fires for the right button even while the left one is held (dragging), whereas a
+// second button on the same mouse gives no new pointerdown, so rotation listens to mousedown.
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 2) game.rotate();
+});
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse' && e.button === 2) {
-    game.rotate();
-    return;
-  }
+  if (e.pointerType === 'mouse' && e.button === 2) return; // handled by mousedown
   tutorial.setPaused(true);
   if (dragPointer !== null) {
     game.rotate();
@@ -593,7 +596,7 @@ async function initOnline(): Promise<void> {
   if (member) await becomeMember().catch(() => undefined);
   // Devices without the code are asked at every launch.
   else showJoin();
-  if (await online.isAdmin().catch(() => false)) showDiagnostics();
+  if (params.get('admin') === '1' && (await online.isAdmin().catch(() => false))) showDiagnostics();
   if (params.get('admin') === '1') await showAdmin().catch(() => undefined);
 }
 

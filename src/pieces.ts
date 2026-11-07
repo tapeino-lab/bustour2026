@@ -170,7 +170,7 @@ function seedGrid(r: number, color: string): Shape[] {
   return out;
 }
 
-export const ANIMALS: PieceDef[] = [
+const RAW_ANIMALS: PieceDef[] = [
   catDef('cat', 'ちゃとら', '#f0a35e', [
     rect(-2, 6, 6, 22, '#c97a34', 3), rect(10, 6, 6, 22, '#c97a34', 3), rect(22, 6, 6, 22, '#c97a34', 3),
     rect(37, -2, 8, 4, '#c97a34', 2), rect(37, 8, 8, 4, '#c97a34', 2),
@@ -254,9 +254,10 @@ export const ANIMALS: PieceDef[] = [
   {
     id: 'dokudami', name: 'どくだみ',
     parts: [
-      rect(0, 24, 6, 40, '#4f8a3a', 3),
-      poly('#3f8a3a', [-4, 16], [-26, 2], [-34, 18], [-24, 30], [-6, 28]),
-      poly('#3f8a3a', [4, 16], [26, 2], [34, 18], [24, 30], [6, 28]),
+      // Short stem with the leaves spread low: a wide, steady base.
+      rect(0, 3, 6, 18, '#4f8a3a', 3),
+      poly('#3f8a3a', [-4, 0], [-26, -10], [-36, 4], [-26, 14], [-6, 12]),
+      poly('#3f8a3a', [4, 0], [26, -10], [36, 4], [26, 14], [6, 12]),
       circle(0, -38, 10, '#ffffff'), circle(0, -10, 10, '#ffffff'),
       circle(-14, -24, 10, '#ffffff'), circle(14, -24, 10, '#ffffff'),
       circle(0, -24, 11, '#f2e27a'),
@@ -351,7 +352,7 @@ export const ANIMALS: PieceDef[] = [
   },
 ];
 
-export const BUS: PieceDef = {
+const RAW_BUS: PieceDef = {
   id: 'bus', name: 'バス',
   parts: [
     rect(0, 0, 168, 56, '#c3cbd3', 10),
@@ -366,6 +367,32 @@ export const BUS: PieceDef = {
   face: { x: -63, y: -9, r: 12 },
 };
 
+/** All pieces are drawn a little smaller than they were designed (outline width stays the same). */
+export const PIECE_SCALE = 0.88;
+
+function scaleShape(s: Shape, k: number): Shape {
+  switch (s.kind) {
+    case 'rect':
+      return { ...s, x: s.x * k, y: s.y * k, w: s.w * k, h: s.h * k, round: (s.round ?? 0) * k };
+    case 'circle':
+      return { ...s, x: s.x * k, y: s.y * k, r: s.r * k };
+    case 'poly':
+      return { ...s, points: s.points.map(([x, y]) => [x * k, y * k] as [number, number]) };
+  }
+}
+
+function scaleDef(d: PieceDef, k: number): PieceDef {
+  return {
+    ...d,
+    parts: d.parts.map((s) => scaleShape(s, k)),
+    details: d.details?.map((s) => scaleShape(s, k)),
+    face: d.face && { ...d.face, x: d.face.x * k, y: d.face.y * k, r: d.face.r * k },
+    joints: d.joints?.map((j) => ({ ...j, x: j.x * k, y: j.y * k })),
+  };
+}
+
+export const ANIMALS: PieceDef[] = RAW_ANIMALS.map((d) => scaleDef(d, PIECE_SCALE));
+export const BUS: PieceDef = scaleDef(RAW_BUS, PIECE_SCALE);
 export const ALL_PIECES: PieceDef[] = [...ANIMALS, BUS];
 
 export function pieceById(id: string): PieceDef {

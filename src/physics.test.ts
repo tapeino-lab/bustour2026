@@ -85,7 +85,7 @@ describe('physics', () => {
     const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
     // Body on the platform, head sticking out past the left edge.
     const left = WORLD_WIDTH / 2 - 115;
-    const p = new PieceBody(def, left + 26, GROUND_TOP - 40);
+    const p = new PieceBody(def, left + 36, GROUND_TOP - 40);
     physics.add(p);
     const tracker = new SettleTracker(40, 100000);
     let settledAt = -1;
