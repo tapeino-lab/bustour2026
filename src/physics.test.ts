@@ -34,7 +34,7 @@ describe('physics', () => {
   });
 
   it('detects a piece dropped beside the platform as fallen', () => {
-    const { p } = dropAndRun('bear', 10, 120);
+    const { p } = dropAndRun('capybara', 10, 120);
     expect(hasFallen(p)).toBe(true);
   });
 

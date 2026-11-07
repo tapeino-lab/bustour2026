@@ -14,8 +14,8 @@ describe('pieceIdForIndex', () => {
       expect(id).not.toBe(BUS.id);
       ids.add(id);
     }
-    expect(ids.size).toBe(20);
-    expect(pieceIdForIndex(9, () => 0.9999999)).toBe(ANIMALS[19].id);
+    expect(ids.size).toBe(ANIMALS.length);
+    expect(pieceIdForIndex(9, () => 0.9999999)).toBe(ANIMALS[ANIMALS.length - 1].id);
   });
 });
 
