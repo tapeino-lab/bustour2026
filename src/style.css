@@ -188,16 +188,23 @@ button {
 
 #over { gap: 12px; padding: 16px; }
 #over > .panel { padding: 8px 18px; }
-.ranking { width: min(360px, 96%); padding: 8px 12px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
-.columns { display: flex; gap: 10px; }
+.ranking { width: min(380px, 96%); padding: 8px 8px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
+.columns { display: flex; gap: 6px; }
 .columns > div { flex: 1; min-width: 0; }
 .columns h4 { margin: 0 0 4px; font-size: 15px; font-weight: 400; text-align: center; }
 .columns ol { list-style: none; margin: 0; padding: 0; text-align: left; font-size: 13px; }
-.columns li { display: flex; gap: 6px; align-items: baseline; padding: 2px 4px; border-bottom: 2px solid #eee; white-space: nowrap; }
+.columns li {
+  display: grid; grid-template-columns: 1.2em minmax(0, 1fr) auto 30px; column-gap: 4px; align-items: center;
+  min-height: 26px; padding: 2px; border-bottom: 2px solid #eee; white-space: nowrap;
+}
 .columns li.me { background: #fff4b8; }
 .columns li.dummy { color: #a0a0a0; }
 .columns .rank { width: 1.4em; text-align: right; }
-.columns .val { margin-left: auto; }
+.columns .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: clamp(13px, 4vw, 15px); letter-spacing: -1px; }
+.columns .val { text-align: right; font-size: 12px; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.columns .val small { margin-left: 1px; font-size: 10px; }
+.columns li > :last-child { justify-self: center; }
+.columns .chip { padding: 3px; font-size: 10px; }
 .link { margin-top: 6px; padding: 4px; border: none; background: none; font-size: 12px; text-decoration: underline; }
 
 .hint { margin: 0 0 6px; font-size: 11px; text-align: center; }
@@ -213,10 +220,11 @@ button {
 }
 .columns li.has-tower { cursor: pointer; }
 .columns li.has-tower:active { background: #ffe680; }
-.columns li.thumb-row { align-items: center; }
 .columns li canvas.thumb { flex: none; border: 2px solid var(--ink); border-radius: 4px; }
 .viewer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.viewer h3 { font-size: 18px; }
+.viewer h3 { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 0 14px; margin: 0; }
+.viewer .tt-name { font-size: 32px; }
+.viewer .tt-val { font-size: 24px; }
 #tower-canvas { border: 3px solid var(--ink); border-radius: 6px; }
 
 .namepad { width: min(360px, 96%); padding: 10px 10px 12px !important; }

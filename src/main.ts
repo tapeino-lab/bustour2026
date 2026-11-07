@@ -182,7 +182,7 @@ function startGame(): void {
 }
 
 let lastTower = '';
-$('my-tower').addEventListener('click', () => showTower(`こんかいの タワー  ${$('over-score').textContent}こ`, lastTower));
+$('my-tower').addEventListener('click', () => showTower('こんかいの タワー', `${$('over-score').textContent}こ`, lastTower));
 
 game.onGameOver = (score, height, tower) => {
   lastTower = tower;
@@ -432,18 +432,27 @@ async function updateRanking(score: number, height: number, tower: string): Prom
 }
 
 /** Opens the tower viewer for a snapshot string; does nothing if it cannot be read. */
-function showTower(title: string, snapshot: string | undefined): void {
+function showTower(name: string, record: string, snapshot: string | undefined): void {
   const tower = decodeTower(snapshot);
   if (!tower) return;
   const w = Math.min(300, Math.round(window.innerWidth * 0.78));
   const h = Math.min(Math.round(w * 1.35), Math.round(window.innerHeight * 0.62));
   drawTowerImage($<HTMLCanvasElement>('tower-canvas'), towerBodies(tower), w, h, faces);
-  $('tower-title').textContent = title;
+  const nameEl = document.createElement('span');
+  nameEl.className = 'tt-name';
+  nameEl.textContent = name;
+  const recordEl = document.createElement('span');
+  recordEl.className = 'tt-val';
+  recordEl.textContent = record;
+  $('tower-title').replaceChildren(nameEl, recordEl);
   showOverlay($('tower'), true);
 }
 $('tower-close').addEventListener('click', () => showOverlay($('tower'), false));
 
-/** Top three rows get a thumbnail; every row with a snapshot gets a "みる" chip and opens the viewer. */
+/**
+ * Rows are a grid: rank | name | value | slot. The slot holds a thumbnail for the top three,
+ * a "みる" chip for the other rows with a snapshot, or stays empty, so the values line up.
+ */
 const THUMBS = 3;
 
 function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): void {
@@ -454,32 +463,37 @@ function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): 
     else if (r.uid === online?.uid) li.classList.add('me');
     const snapshot = kind === 'height' ? r.towerHeight : r.towerCount;
     const tower = r.dummy ? null : decodeTower(snapshot);
-    if (tower && i < THUMBS) {
-      const thumb = document.createElement('canvas');
-      thumb.className = 'thumb';
-      drawTowerImage(thumb, towerBodies(tower), 30, 40, faces);
-      li.classList.add('thumb-row');
-      li.appendChild(thumb);
-    }
     const rank = document.createElement('span');
     rank.className = 'rank';
     rank.textContent = `${i + 1}`;
     const name = document.createElement('span');
+    name.className = 'name';
     name.textContent = r.name;
     const val = document.createElement('span');
     val.className = 'val';
+    // In the list the count has no unit (the column header says こすう); the viewer title keeps it.
+    val.textContent = kind === 'height' ? r.height.toFixed(1) : `${r.count}`;
+    if (kind === 'height') {
+      const unit = document.createElement('small');
+      unit.textContent = 'm';
+      val.appendChild(unit);
+    }
     const record = kind === 'height' ? `${r.height.toFixed(1)}m` : `${r.count}こ`;
-    val.textContent = record;
-    li.append(rank, name, val);
+    let slot: HTMLElement = document.createElement('span');
+    if (tower && i < THUMBS) {
+      const thumb = document.createElement('canvas');
+      thumb.className = 'thumb';
+      drawTowerImage(thumb, towerBodies(tower), 26, 34, faces);
+      li.classList.add('thumb-row');
+      slot = thumb;
+    } else if (tower) {
+      slot.className = 'chip';
+      slot.textContent = 'みる';
+    }
+    li.append(rank, name, val, slot);
     if (tower) {
       li.classList.add('has-tower');
-      if (i >= THUMBS) {
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.textContent = 'みる';
-        li.appendChild(chip);
-      }
-      li.addEventListener('click', () => showTower(`${r.name}  ${record}`, snapshot));
+      li.addEventListener('click', () => showTower(r.name, record, snapshot));
     }
     list.appendChild(li);
   });
