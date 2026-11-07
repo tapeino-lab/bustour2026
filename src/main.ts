@@ -483,7 +483,7 @@ function fillRanking(list: HTMLElement, rows: RankingRow[], kind: RankingKind): 
     if (tower && i < THUMBS) {
       const thumb = document.createElement('canvas');
       thumb.className = 'thumb';
-      drawTowerImage(thumb, towerBodies(tower), 26, 34, faces);
+      drawTowerImage(thumb, towerBodies(tower), 30, 40, faces);
       li.classList.add('thumb-row');
       slot = thumb;
     } else if (tower) {
