@@ -167,8 +167,7 @@ rotateBtn.addEventListener('pointerdown', (e) => {
 });
 
 function startGame(): void {
-  if (pendingUpdate) {
-    reloadToVersion(pendingUpdate);
+  if (pendingUpdate && reloadToVersion(pendingUpdate)) {
     return;
   }
   overEl.classList.add('hidden');
@@ -211,12 +210,41 @@ game.onGameOver = (score, height, tower) => {
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
   $('open-join').classList.toggle('hidden', !online || member);
-  void fetchLatestVersion().then((v) => {
-    if (v && v !== __APP_VERSION__) pendingUpdate = v;
-  });
+  void checkForUpdate();
 };
 
 $('retry').addEventListener('click', startGame);
+
+// ---- Updates: look for a new version regularly, apply it only at a natural moment ----------
+const UPDATE_CHECK_MS = 60_000;
+
+async function checkForUpdate(): Promise<void> {
+  const v = await fetchLatestVersion();
+  if (v && v !== __APP_VERSION__) pendingUpdate = v;
+}
+
+/** Nothing would be lost by reloading now: no piece dropped yet, no finger down, no dialog open. */
+function atFreshStart(): boolean {
+  const dialogOpen = [...document.querySelectorAll('.overlay')].some((el) => !el.classList.contains('hidden'));
+  return game.state === 'aim' && game.pieceNumber === 1 && dragPointer === null && !dialogOpen;
+}
+
+/** Applies a pending update if this is a natural moment (never in the middle of a game). */
+function maybeApplyUpdate(returning = false): void {
+  if (!pendingUpdate) return;
+  // Coming back to the app with only the result screen up (no name entry etc.) is also fine.
+  const open = [...document.querySelectorAll('.overlay')].filter((el) => !el.classList.contains('hidden'));
+  const resultsShown = returning && game.state === 'over' && open.length === 1 && open[0] === overEl;
+  if (atFreshStart() || resultsShown) reloadToVersion(pendingUpdate);
+}
+
+setInterval(() => {
+  void checkForUpdate().then(() => maybeApplyUpdate());
+}, UPDATE_CHECK_MS);
+setInterval(() => maybeApplyUpdate(), 1000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) void checkForUpdate().then(() => maybeApplyUpdate(true));
+});
 
 // ---- Sound: off at every launch; toggles under the つぎ panel --------------------------------
 const sound = new Sound();

@@ -10,7 +10,23 @@ export async function fetchLatestVersion(): Promise<string | null> {
   }
 }
 
-/** Reloads the page; the query string makes caches fetch the new index.html. */
-export function reloadToVersion(version: string): void {
-  location.replace(`${location.pathname}?v=${encodeURIComponent(version)}`);
+const RELOADED_KEY = 'bustour2026.reloadedTo';
+
+/**
+ * Reloads into `version`, keeping the other URL options (e.g. ?admin=1); the v= parameter makes
+ * caches fetch the new index.html. Returns false (and does nothing) if we already reloaded for this
+ * version in this tab, so a stale cache can never cause a reload loop.
+ */
+export function reloadToVersion(version: string): boolean {
+  try {
+    if (sessionStorage.getItem(RELOADED_KEY) === version) return false;
+    sessionStorage.setItem(RELOADED_KEY, version);
+  } catch {
+    // Without session storage we still reload; the version check below stops a second attempt.
+  }
+  const url = new URL(location.href);
+  if (url.searchParams.get('v') === version) return false;
+  url.searchParams.set('v', version);
+  location.replace(url.toString());
+  return true;
 }
