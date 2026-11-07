@@ -323,3 +323,4 @@ button {
 #admin-list .toggle.show + label { margin-left: 0; }
 #admin-list .toggle.show, #admin-list label { flex: none; white-space: nowrap; }
 #admin-list li > span { min-width: 0; }
+#admin-reset-btn { padding: 8px 14px; font-size: 13px; background: #ffe0e0; }

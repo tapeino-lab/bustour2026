@@ -552,6 +552,19 @@ async function showAdmin(): Promise<void> {
     }
   }
   if (admin) {
+    $('admin-reset').classList.remove('hidden');
+    $('admin-reset-btn').onclick = async () => {
+      if (!window.confirm('ランキングを ぜんぶ けしますか？（もとに もどせません）')) return;
+      const status = $('admin-reset-status');
+      status.textContent = 'けしています…';
+      try {
+        const n = await o.resetRanking();
+        myEntry = null;
+        status.textContent = `${n}けん けしました`;
+      } catch {
+        status.textContent = 'しっぱい';
+      }
+    };
     $('admin-bgm').classList.remove('hidden');
     const fileInput = $<HTMLInputElement>('admin-bgm-file');
     fileInput.onchange = async () => {

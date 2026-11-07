@@ -139,6 +139,8 @@ describe('scores', () => {
     await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 5, 3.1)));
     await assertFails(setDoc(doc(as('member2'), 'scores/member2'), score('なまえ', 6, 3.0)));
     await assertFails(deleteDoc(doc(as('member2'), 'scores/member2')));
+    // Ranking reset: only admins can delete entries.
+    await assertSucceeds(deleteDoc(doc(as('admin1'), 'scores/member2')));
   });
   it('rankings are readable by members only', async () => {
     const top = (uid: string) => getDocs(query(collection(as(uid), 'scores'), orderBy('height', 'desc'), limit(20)));

@@ -49,7 +49,8 @@ export class Game {
   private radius = 0;
   private camTop = 0;
   private overFrames = 0;
-  private settle = new SettleTracker();
+  /** Next piece once everything has been nearly still for a short while (small wobbles ignored). */
+  private settle = new SettleTracker(24, 600, 0.15, 0.008);
   private dragging = false;
   private dragStartX = 0;
   private dragStartAim = 0;

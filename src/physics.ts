@@ -306,7 +306,7 @@ export class Physics {
           s.kind === 'circle' && s.exact
             ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + PIECE_OUTLINE) / PX)
             : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), PIECE_OUTLINE);
-        body.createFixture(shape, { density: DENSITY, friction: FRICTION, restitution: 0 });
+        body.createFixture(shape, { density: DENSITY, friction: s.friction ?? FRICTION, restitution: 0 });
       }
       bodies.push(body);
     }

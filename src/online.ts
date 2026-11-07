@@ -4,7 +4,7 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
   collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
-  serverTimestamp, setDoc, where, type Firestore,
+  serverTimestamp, setDoc, where, writeBatch, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 
@@ -144,5 +144,16 @@ export class Online {
 
   async saveBgm(audio: string): Promise<void> {
     await setDoc(doc(this.db, 'media', 'bgm'), { audio, updatedAt: serverTimestamp() });
+  }
+
+  /** Deletes every ranking entry (admins only). Returns how many were removed. */
+  async resetRanking(): Promise<number> {
+    const snap = await getDocs(collection(this.db, 'scores'));
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = writeBatch(this.db);
+      for (const d of snap.docs.slice(i, i + 400)) batch.delete(d.ref);
+      await batch.commit();
+    }
+    return snap.size;
   }
 }

@@ -9,6 +9,8 @@ interface ShapeBase {
   color: string;
   /** Which segment (body) of the piece the shape belongs to; 0 by default. */
   seg?: number;
+  /** Friction of this part (default: the normal high friction). */
+  friction?: number;
 }
 export type Shape =
   | (ShapeBase & { kind: 'rect'; x: number; y: number; w: number; h: number; round?: number })
@@ -196,14 +198,15 @@ const RAW_ANIMALS: PieceDef[] = [
   {
     id: 'bird', name: 'わたりどり',
     parts: [
-      circle(6, 8, 20, '#7a6a58'),
-      circle(-20, -14, 16, '#7a6a58'),
-      poly('#5e5040', [-4, -6], [22, -42], [32, -32], [16, -2]),
-      poly('#e0a030', [-35, -19], [-50, -14], [-35, -8]),
-      poly('#5e5040', [22, 8], [44, -2], [44, 16]),
+      // Small and angular: no round parts.
+      poly('#7a6a58', [-8, -4], [14, -6], [26, 4], [12, 16], [-6, 12]),
+      poly('#7a6a58', [-27, -12], [-22, -24], [-9, -24], [-4, -12], [-9, 0], [-22, 0]),
+      poly('#5e5040', [-2, -6], [16, -34], [24, -28], [12, -2]),
+      poly('#e0a030', [-27, -15], [-38, -11], [-27, -7]),
+      poly('#5e5040', [22, 4], [38, -4], [38, 10]),
     ],
-    details: [rect(4, 16, 26, 10, '#efe6d8', 5)],
-    face: { x: -20, y: -14, r: 13 },
+    details: [poly('#efe6d8', [-4, 6], [12, 4], [18, 8], [10, 13], [-3, 10])],
+    face: { x: -15, y: -12, r: 10 },
   },
   {
     id: 'leopard', name: 'めひょう',
@@ -224,31 +227,31 @@ const RAW_ANIMALS: PieceDef[] = [
   slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
-    // Very soft: head, front and back body, tail and the two legs are separate bodies joined by
-    // floppy welds, so it flops and sags like the real thing; the legs wobble a little.
+    // Very soft: head, tail and the two legs hang off the body on floppy welds, so it flops down
+    // like the real thing and its legs splay out a little.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
       circle(-40, 0, 18, '#f7a8c4', 0),
       polySeg(0, '#e57aa3', [-50, -12], [-64, -24], [-58, -29], [-46, -16]),
       polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
       polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
-      rect(-12, 6, 32, 22, '#f7a8c4', 11, 1),
-      rect(16, 6, 32, 22, '#f7a8c4', 11, 2),
-      polySeg(3, '#f7a8c4', [30, -2], [66, 2], [70, 10], [30, 16]),
-      rect(-22, 24, 8, 14, '#f7a8c4', 3, 4),
-      rect(26, 24, 8, 14, '#f7a8c4', 3, 5),
+      rect(2, 6, 60, 22, '#f7a8c4', 11, 1),
+      polySeg(2, '#f7a8c4', [30, -2], [66, 2], [70, 10], [30, 16]),
+      // Legs splayed outwards, so they bend open rather than tucking under.
+      // Slippery feet slide outwards as the body flops down (splaying instead of tucking in).
+      { ...limb('#f7a8c4', -20, 16, -32, 34, 8), seg: 3, friction: 0.2 },
+      { ...limb('#f7a8c4', 24, 16, 36, 34, 8), seg: 4, friction: 0.2 },
     ],
     details: [
-      ...toes(-22, 32, '#e57aa3', 4), ...toes(26, 32, '#e57aa3', 5),
-      polySeg(3, '#fbd0df', [36, 0], [64, 3], [64, 6], [36, 4]),
+      ...toes(-33, 36, '#e57aa3', 3), ...toes(37, 36, '#e57aa3', 4),
+      polySeg(2, '#fbd0df', [36, 0], [64, 3], [64, 6], [36, 4]),
     ],
     face: { x: -40, y: 0, r: 14, seg: 0 },
     joints: [
-      { a: 0, b: 1, x: -26, y: 4, hz: 2.4, damping: 1 },
-      { a: 1, b: 2, x: 2, y: 6, hz: 2.2, damping: 1 },
-      { a: 2, b: 3, x: 31, y: 6, hz: 2.4, damping: 1 },
-      { a: 1, b: 4, x: -22, y: 18, hz: 2.2, damping: 0.35 },
-      { a: 2, b: 5, x: 26, y: 18, hz: 2.2, damping: 0.35 },
+      { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
+      { a: 1, b: 2, x: 31, y: 6, hz: 2, damping: 1 },
+      { a: 1, b: 3, x: -20, y: 17, hz: 3.5, damping: 0.8 },
+      { a: 1, b: 4, x: 24, y: 17, hz: 3.5, damping: 0.8 },
     ],
   },
   {
@@ -337,9 +340,9 @@ const RAW_ANIMALS: PieceDef[] = [
   {
     // Petals all round a brown centre, like a picture-book sunflower.
     id: 'sunflower', name: 'ひまわり',
-    parts: [...petals(14, 17, 36, 12, '#ffd84d', '#f6c12e'), circle(0, 0, 19, '#c98a3a')],
-    details: seedGrid(19, '#7a4a1e'),
-    face: { x: 0, y: 0, r: 13 },
+    parts: [...petals(14, 19, 40, 13, '#ffd84d', '#f6c12e'), circle(0, 0, 21, '#c98a3a')],
+    details: seedGrid(21, '#7a4a1e'),
+    face: { x: 0, y: 0, r: 15 },
   },
   {
     id: 'leaf', name: 'はっぱ',

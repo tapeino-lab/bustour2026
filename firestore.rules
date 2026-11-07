@@ -69,7 +69,8 @@ service cloud.firestore {
       allow update: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
         && request.resource.data.count >= resource.data.count
         && request.resource.data.height >= resource.data.height;
-      allow delete: if false;
+      // Only admins may delete (ranking reset from the admin page).
+      allow delete: if isAdmin();
     }
 
     // Background music: readable by members (and admins), writable by admins only.
