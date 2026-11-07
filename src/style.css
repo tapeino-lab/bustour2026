@@ -194,6 +194,9 @@ button {
 /* Both values are short (たかさ under 100m, こすう under 100), so each column only takes what it needs. */
 .columns > div { flex: 0 1 auto; }
 .columns h4 { margin: 0 0 4px; font-size: 15px; font-weight: 400; text-align: center; }
+/* Same colours as the numbers on the result screen: こすう orange, たかさ blue. */
+.columns h4.h-count { color: #ff7a1a; }
+.columns h4.h-height { color: #2f9bff; }
 .columns ol { list-style: none; margin: 0; padding: 0; text-align: left; font-size: 13px; }
 .columns li {
   display: grid; grid-template-columns: 1.2em minmax(0, 1fr) auto 30px; column-gap: 4px; align-items: center;
