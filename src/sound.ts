@@ -33,6 +33,8 @@ const POYO_VARIANTS: PoyoNote[][] = [
   // ぽよよん: a bit longer, with a big wobble
   [{ at: 0, dur: 0.3, pts: [[0, 360], [0.05, 760], [0.3, 520]], wobble: [12, 70], vol: 0.33 }],
 ];
+/** Overall level of the spawn sounds against the other effects. */
+const POYO_VOLUME = 0.7;
 /** A piece of this size (√area in px, about a cat) gets the sounds at their written pitch. */
 const POYO_BASE_SIZE = 50;
 
@@ -179,8 +181,9 @@ export class Sound {
       lfo.stop(end);
     }
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(n.vol, t + 0.012);
-    env.gain.exponentialRampToValueAtTime(n.vol / 2, t + n.dur * 0.45);
+    const vol = n.vol * POYO_VOLUME;
+    env.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    env.gain.exponentialRampToValueAtTime(vol / 2, t + n.dur * 0.45);
     env.gain.exponentialRampToValueAtTime(0.0001, t + n.dur);
     osc.connect(env).connect(this.sfxGain!);
     osc.start(t);
