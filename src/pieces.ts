@@ -262,9 +262,12 @@ const RAW_ANIMALS: PieceDef[] = [
       polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
       polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
       // The body in two halves (front: segment 1, back: segment 8) that overlap a little, so the
-      // seam stays hidden when it bends.
+      // seam stays hidden when it bends. Each half is rounded only at its outer end: a square
+      // block at the inner end keeps the body straight-sided there (no waist at the seam).
       rect(-11, 6, 34, 22, '#f7a8c4', 11, 1),
+      rect(0, 6, 12, 22, '#f7a8c4', 0, 1),
       rect(15, 6, 34, 22, '#f7a8c4', 11, 8),
+      rect(4, 6, 12, 22, '#f7a8c4', 0, 8),
       // The tail in two pieces (base and tip), so it bends in the middle.
       polySeg(2, '#f7a8c4', [30, -2], [50, 0], [50, 13], [30, 16]),
       polySeg(7, '#f7a8c4', [49, 0], [66, 2], [70, 10], [49, 13]),
