@@ -163,7 +163,6 @@ button {
 .join { width: min(320px, 90%); }
 .join input {
   width: 8em;
-  letter-spacing: 0.3em;
   margin: 8px 0 4px;
   padding: 10px 12px;
   border: 3px solid var(--ink);
@@ -324,3 +323,4 @@ button {
 #admin-list .toggle.show, #admin-list label { flex: none; white-space: nowrap; }
 #admin-list li > span { min-width: 0; }
 #admin-reset-btn { padding: 8px 14px; font-size: 13px; background: #ffe0e0; }
+.join-hint { margin: 0 0 4px; font-size: 14px; }

@@ -464,8 +464,10 @@ $('rename').addEventListener('click', async () => {
 });
 
 $('join-ok').addEventListener('click', async () => {
-  if (!online || !joinInput.value.trim()) return;
-  const ok = await online.join(joinInput.value);
+  const code = joinDigits(joinInput.value);
+  joinInput.value = code;
+  if (!online || !code) return;
+  const ok = await online.join(code);
   if (!ok) {
     $('join-error').classList.remove('hidden');
     return;
@@ -475,10 +477,20 @@ $('join-ok').addEventListener('click', async () => {
   await becomeMember();
 });
 // Join codes are numbers of up to four digits: drop anything else as it is typed.
-joinInput.addEventListener('input', () => {
-  const digits = joinInput.value.normalize('NFKC').replace(/[^0-9]/g, '').slice(0, 4);
+// Join codes are numbers of up to four digits. Clean the field only once typing is settled:
+// rewriting it while a Japanese keyboard is still composing (iOS) doubles characters and moves
+// the cursor, which made correct codes fail.
+function joinDigits(text: string): string {
+  return text.normalize('NFKC').replace(/[^0-9]/g, '').slice(0, 4);
+}
+function cleanJoinInput(): void {
+  const digits = joinDigits(joinInput.value);
   if (digits !== joinInput.value) joinInput.value = digits;
+}
+joinInput.addEventListener('input', (e) => {
+  if (!(e as InputEvent).isComposing) cleanJoinInput();
 });
+joinInput.addEventListener('compositionend', cleanJoinInput);
 joinInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $('join-ok').click();
 });
