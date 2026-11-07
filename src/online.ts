@@ -116,4 +116,15 @@ export class Online {
     const snap = await getDocs(query(collection(this.db, 'scores'), orderBy(kind, 'desc'), limit(RANKING_SIZE)));
     return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<ScoreEntry, 'uid'>) }));
   }
+
+  /** Background music as a data URL, or null if none has been uploaded. */
+  async loadBgm(): Promise<string | null> {
+    const d = await getDoc(doc(this.db, 'media', 'bgm'));
+    const audio = d.exists() ? d.get('audio') : null;
+    return typeof audio === 'string' ? audio : null;
+  }
+
+  async saveBgm(audio: string): Promise<void> {
+    await setDoc(doc(this.db, 'media', 'bgm'), { audio, updatedAt: serverTimestamp() });
+  }
 }

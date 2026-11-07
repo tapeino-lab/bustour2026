@@ -16,6 +16,7 @@ import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
 import { waitForFont } from './fonts';
 import { DebugOverlay } from './debug';
+import { Sound } from './sound';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -90,6 +91,11 @@ function resize(): void {
   canvas.height = Math.round(h * dpr);
   scale = w / WORLD_WIDTH;
   game.setViewHeight(h / scale);
+  // Sound toggles sit right under the つぎ panel (drawn on the canvas in logical px).
+  const soundEl = $('sound');
+  soundEl.style.left = `${(WORLD_WIDTH - 94) * scale}px`;
+  soundEl.style.top = `${96 * scale}px`;
+  soundEl.style.width = `${82 * scale}px`;
   buildBackground(canvas.width, canvas.height, scale * dpr);
   debug?.resize(`${w}×${h}`);
   // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
@@ -180,6 +186,7 @@ game.onGameOver = (score, height, tower) => {
   $('over-best').textContent = String(best);
   $('over-best-height').textContent = bestHeight.toFixed(1);
   $('new-best').classList.toggle('hidden', !isNew);
+  sound.play(isNew && score > 0 ? 'best' : 'over');
   $('ranking').classList.add('hidden');
   if (online && member) void updateRanking(score, height, tower);
   rotateBtn.classList.add('hidden');
@@ -191,6 +198,26 @@ game.onGameOver = (score, height, tower) => {
 };
 
 $('retry').addEventListener('click', startGame);
+
+// ---- Sound: off at every launch; toggles under the つぎ panel --------------------------------
+const sound = new Sound();
+game.onSound = (name) => sound.play(name);
+const sfxToggle = $<HTMLButtonElement>('sfx-toggle');
+const bgmToggle = $<HTMLButtonElement>('bgm-toggle');
+sfxToggle.addEventListener('click', () => {
+  sound.setSfx(!sound.sfxOn);
+  sfxToggle.setAttribute('aria-pressed', String(sound.sfxOn));
+});
+bgmToggle.addEventListener('click', async () => {
+  const on = !sound.bgmOn;
+  bgmToggle.setAttribute('aria-pressed', String(on));
+  const ok = await sound.setBgm(on);
+  if (!ok) {
+    // No music uploaded yet: hide the switch again.
+    bgmToggle.setAttribute('aria-pressed', 'false');
+    bgmToggle.classList.add('hidden');
+  }
+});
 
 // ---- Online: join code, face photos, admin upload -------------------------------------------
 let online: Online | null = null;
@@ -221,6 +248,10 @@ function showJoin(): void {
 async function becomeMember(): Promise<void> {
   member = true;
   if (!online) return;
+  // Music is members-only and downloaded only when someone switches it on.
+  const o = online;
+  sound.loadBgm = () => o.loadBgm();
+  $('bgm-toggle').classList.remove('hidden');
   setFaces(await online.loadFaces());
   myEntry = await online.myScore().catch(() => null);
 }
@@ -498,6 +529,33 @@ async function showAdmin(): Promise<void> {
       li.append(pic, name, label);
       list.appendChild(li);
     }
+  }
+  if (admin) {
+    $('admin-bgm').classList.remove('hidden');
+    const fileInput = $<HTMLInputElement>('admin-bgm-file');
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file) return;
+      const status = $('admin-bgm-status');
+      if (file.size > 700_000) {
+        status.textContent = 'おおきすぎます（700KBまで）';
+        return;
+      }
+      status.textContent = 'ほぞんちゅう…';
+      try {
+        const audio = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result));
+          r.onerror = () => reject(r.error);
+          r.readAsDataURL(file);
+        });
+        await o.saveBgm(audio);
+        status.textContent = 'ほぞんしました';
+      } catch {
+        status.textContent = 'しっぱい';
+      }
+    };
   }
   showOverlay(adminEl, true);
 }

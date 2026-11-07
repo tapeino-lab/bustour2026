@@ -3,6 +3,7 @@ import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
 import { encodeTower } from './tower';
+import type { SoundName } from './sound';
 
 export const STEP_MS = 1000 / 60;
 /** Gap between the tower top and the bottom of a newly spawned piece. */
@@ -34,6 +35,8 @@ export class Game {
   next: PieceBody | null = null;
   /** Called once per game with the piece count, the highest settled tower (m) and the last standing tower. */
   onGameOver: (score: number, height: number, tower: string) => void = () => {};
+  /** Called for moments that make a sound. */
+  onSound: (name: SoundName) => void = () => {};
   /** Snapshot of the tower the last time it stood still (see tower.ts). */
   lastTower = encodeTower([]);
   /** Highest settled tower in this game, in metres. */
@@ -70,6 +73,7 @@ export class Game {
       if (piece === this.freeFall) {
         piece.setGravityScale(1);
         this.freeFall = null;
+        this.onSound('land');
       }
     };
     return physics;
@@ -112,6 +116,7 @@ export class Game {
     this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
     this.current.setPose(this.aimX, top - SPAWN_GAP - this.radius, 0);
     this.poof = { x: this.current.x, y: this.current.y, size: Math.max(34, this.radius * 0.95) };
+    this.onSound('spawn');
     this.spawnAge = 0;
     this.state = 'aim';
   }
@@ -153,6 +158,7 @@ export class Game {
     if (this.state !== 'aim' || !this.current) return;
     this.angle += ROTATE_STEP;
     this.current.setPose(this.current.x, this.current.y, this.angle);
+    this.onSound('rotate');
   }
 
   pointerDown(x: number): void {
@@ -184,6 +190,7 @@ export class Game {
     const p = this.current;
     this.physics.add(p);
     p.setGravityScale(FREE_FALL_GRAVITY);
+    this.onSound('drop');
     this.pieces.push(p);
     this.freeFall = p;
     this.current = null;

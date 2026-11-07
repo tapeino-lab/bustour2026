@@ -288,3 +288,21 @@ button {
 .my-tower .chip { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-size: 13px; padding: 4px 12px; line-height: 1; }
 #over { overflow-y: auto; }
 .kana-tools .mark { font-size: 36px; line-height: 1; padding: 0 0 6px; text-indent: -0.45em; overflow: hidden; }
+
+.sound { position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 5px; }
+.toggle {
+  padding: 5px 0;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  color: #999;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 2px 2px 0 var(--ink);
+  touch-action: manipulation;
+}
+.toggle::after { content: ' オフ'; }
+.toggle[aria-pressed='true'] { background: var(--yellow); color: var(--ink); }
+.toggle[aria-pressed='true']::after { content: ' オン'; }
+.admin-bgm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
+.admin-bgm input { display: none; }

@@ -195,14 +195,15 @@ export function buildBackground(w: number, h: number, k: number): void {
 /** Comic-style Mt. Fuji filling the lower part of the screen, with a snow cap and clouds. */
 function drawFuji(g: CanvasRenderingContext2D, W: number, H: number): void {
   // Wide feet and slopes that curve in towards a small flat top, like the real Fuji.
-  const peakY = H * 0.44;
+  const peakY = H * 0.28;
   const topHalf = W * 0.1;
   const cx = W * 0.5;
+  const shoulder = peakY + (H - peakY) * 0.4;
   const mountain = new Path2D();
   mountain.moveTo(-W * 0.9, H + 10);
-  mountain.bezierCurveTo(-W * 0.2, H * 0.9, cx - W * 0.22, H * 0.66, cx - topHalf, peakY);
+  mountain.bezierCurveTo(-W * 0.2, H * 0.9, cx - W * 0.22, shoulder, cx - topHalf, peakY);
   mountain.lineTo(cx + topHalf, peakY);
-  mountain.bezierCurveTo(cx + W * 0.22, H * 0.66, W * 1.2, H * 0.9, W * 1.9, H + 10);
+  mountain.bezierCurveTo(cx + W * 0.22, shoulder, W * 1.2, H * 0.9, W * 1.9, H + 10);
   mountain.closePath();
 
   const body = g.createLinearGradient(0, peakY, 0, H);

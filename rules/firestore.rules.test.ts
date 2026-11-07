@@ -136,3 +136,19 @@ describe('scores', () => {
     await assertFails(top('stranger'));
   });
 });
+
+describe('media (bgm)', () => {
+  const MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAA';
+  it('is readable by members only and writable by admins only', async () => {
+    await assertSucceeds(setDoc(doc(as('admin1'), 'media/bgm'), { audio: MP3, updatedAt: serverTimestamp() }));
+    await assertSucceeds(getDoc(doc(as('member1'), 'media/bgm')));
+    await assertFails(getDoc(doc(as('stranger'), 'media/bgm')));
+    await assertFails(setDoc(doc(as('member1'), 'media/bgm'), { audio: MP3, updatedAt: serverTimestamp() }));
+  });
+  it('accepts only audio data URLs under the size limit, only as bgm', async () => {
+    await assertFails(setDoc(doc(as('admin1'), 'media/bgm'), { audio: 'data:text/html;base64,AAAA', updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('admin1'), 'media/other'), { audio: MP3, updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('admin1'), 'media/bgm'), { audio: MP3 + 'A'.repeat(950000), updatedAt: serverTimestamp() }));
+  });
+});
+

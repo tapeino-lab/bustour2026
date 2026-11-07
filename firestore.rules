@@ -7,6 +7,7 @@ rules_version = '2';
 //   admins/{uid}     {}                        set in the console only; who can upload faces
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
 //   faces/{pieceId}  { image, updatedAt }      face photo (JPEG data URL), members only
+//   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
 //   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight? }
 //                    personal bests for the rankings (+ tower snapshots), members only
 service cloud.firestore {
@@ -69,6 +70,19 @@ service cloud.firestore {
         && request.resource.data.count >= resource.data.count
         && request.resource.data.height >= resource.data.height;
       allow delete: if false;
+    }
+
+    // Background music: readable by members (and admins), writable by admins only.
+    match /media/{id} {
+      allow read: if isMember() || isAdmin();
+      allow create, update: if isAdmin()
+        && id == 'bgm'
+        && request.resource.data.keys().hasOnly(['audio', 'updatedAt'])
+        && request.resource.data.audio is string
+        && request.resource.data.audio.size() < 950000
+        && request.resource.data.audio.matches('^data:audio/(mpeg|mp3|mp4|x-m4a|aac|ogg|webm);base64,.*')
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     // Face photos: readable by members (and admins), writable by admins only.
