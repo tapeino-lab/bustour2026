@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Box, Vec2 } from 'planck';
+import { Box, RevoluteJoint, Vec2 } from 'planck';
 import { SettleTracker } from './logic';
 import { ALL_PIECES, type PieceDef } from './pieces';
 import { GROUND_TOP, PIECE_OUTLINE, PLATFORM_OUTLINE, PieceBody, Physics, WORLD_WIDTH, hasFallen } from './physics';
@@ -96,6 +96,27 @@ describe('physics', () => {
     const bend = Math.abs(p.segPose(0).angle - p.segPose(1).angle);
     expect(bend).toBeGreaterThan(0.03);
     expect(settledAt).toBeGreaterThan(0);
+  });
+
+  it('axolotl legs only bend outwards while falling, then swing both ways once landed', () => {
+    const physics = new Physics();
+    const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
+    const p = new PieceBody(def, WORLD_WIDTH / 2, GROUND_TOP - 200);
+    physics.add(p);
+    // Front leg turns left (negative), back leg right (positive) relative to the body.
+    const hipFront = () => p.segPose(3).angle - p.segPose(1).angle;
+    const hipBack = () => p.segPose(5).angle - p.segPose(1).angle;
+    for (let i = 0; i < 400 && !p.landed; i++) {
+      physics.step();
+      if (!p.landed) {
+        expect(hipFront()).toBeLessThan(0.02);
+        expect(hipBack()).toBeGreaterThan(-0.02);
+      }
+    }
+    expect(p.landed).toBe(true);
+    const hip = p.joints[3] as RevoluteJoint;
+    expect(hip.getLowerLimit()).toBeCloseTo(-0.6);
+    expect(hip.getUpperLimit()).toBeCloseTo(0.4);
   });
 
   it('a frozen soft piece keeps its shape even with weight on it', () => {

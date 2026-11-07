@@ -111,6 +111,8 @@ export class PieceBody {
   bodies: Body[] = [];
   /** Joints between segments (until the piece is frozen). */
   joints: Joint[] = [];
+  /** True once the dropped piece has touched something (another piece or the platform). */
+  landed = false;
   /** True once a soft piece has been locked into its current shape. */
   frozen = false;
   readonly segments: number;
@@ -312,6 +314,8 @@ export class Physics {
   readonly platform: Body;
   /** Called when a dropped piece touches anything for the first time. */
   onContact: (piece: PieceBody) => void = () => {};
+  /** Pieces that touched something for the first time during the current step. */
+  private justLanded = new Set<PieceBody>();
 
   constructor() {
     this.world = new World({ gravity: new Vec2(0, GRAVITY / PX) });
@@ -326,8 +330,11 @@ export class Physics {
       const a = c.getFixtureA().getBody().getUserData() as PieceBody | null;
       const b = c.getFixtureB().getBody().getUserData() as PieceBody | null;
       if (a === b) return; // two segments of the same piece
-      if (a) this.onContact(a);
-      if (b) this.onContact(b);
+      for (const p of [a, b]) {
+        if (!p) continue;
+        if (!p.landed) this.justLanded.add(p);
+        this.onContact(p);
+      }
     });
   }
 
@@ -431,6 +438,17 @@ export class Physics {
 
   step(): void {
     this.world.step(STEP_SEC, 8, 3);
+    // Joints get their landed range after the step (not while the world is solving contacts).
+    for (const p of this.justLanded) {
+      p.landed = true;
+      // joints[i] belongs to def.joints[i] (all are created together in add()).
+      if (p.frozen || p.joints.length !== p.def.joints?.length) continue;
+      p.def.joints.forEach((j, i) => {
+        const joint = p.joints[i];
+        if (j.landed && joint instanceof RevoluteJoint) joint.setLimits(j.landed[0], j.landed[1]);
+      });
+    }
+    this.justLanded.clear();
   }
 }
 

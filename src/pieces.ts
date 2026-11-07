@@ -43,6 +43,8 @@ export interface SoftJoint {
   hinge?: [number, number];
   /** A hinge that swings freely (no friction), like a dangling tail. */
   loose?: boolean;
+  /** Hinge range once the piece has touched something (until then `hinge` applies). */
+  landed?: [number, number];
 }
 
 export interface PieceDef {
@@ -246,7 +248,7 @@ const RAW_ANIMALS: PieceDef[] = [
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
     // Very soft: the head hangs off the body on a floppy weld, the tail (base and tip) and the two
-    // legs on hinges, so it flops down like the real thing and its legs splay out a little.
+    // legs on loose hinges, so it flops down like the real thing and its legs dangle.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
       circle(-40, 0, 18, '#f7a8c4', 0),
@@ -275,11 +277,13 @@ const RAW_ANIMALS: PieceDef[] = [
       // The tail dangles but never stands up: both its joints swing freely, mostly downwards.
       { a: 1, b: 2, x: 31, y: 6, hinge: [-0.1, 1.0], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.1, 0.8], loose: true },
-      // Hips and knees only bend outwards: the front leg to the left, the back leg to the right.
-      { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0] },
-      { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0] },
-      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5] },
-      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8] },
+      // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
+      // the back leg to the right), so they never tuck in under the body; once landed they swing
+      // both ways.
+      { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0], landed: [-0.6, 0.4], loose: true },
+      { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0], landed: [-0.9, 0.5], loose: true },
+      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: [-0.4, 0.6], loose: true },
+      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8], landed: [-0.5, 0.9], loose: true },
     ],
   },
   {
