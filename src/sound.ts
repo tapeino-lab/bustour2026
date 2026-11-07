@@ -34,6 +34,13 @@ export class Sound {
     return this.ctx;
   }
 
+  /** Pauses everything (music and effects) while the page is hidden; resumes when shown again. */
+  setHidden(hidden: boolean): void {
+    if (!this.ctx) return;
+    if (hidden) void this.ctx.suspend();
+    else if (this.sfxOn || this.bgmOn) void this.ctx.resume();
+  }
+
   setSfx(on: boolean): void {
     this.sfxOn = on;
     if (on) this.audio();

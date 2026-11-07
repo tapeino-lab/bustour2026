@@ -217,6 +217,10 @@ $('retry').addEventListener('click', startGame);
 // ---- Sound: off at every launch; toggles under the つぎ panel --------------------------------
 const sound = new Sound();
 game.onSound = (name) => sound.play(name);
+// Another app/tab in front, or the screen locked: pause the music and effects until we are back.
+document.addEventListener('visibilitychange', () => sound.setHidden(document.hidden));
+window.addEventListener('pagehide', () => sound.setHidden(true));
+window.addEventListener('pageshow', () => sound.setHidden(document.hidden));
 const sfxToggle = $<HTMLButtonElement>('sfx-toggle');
 const bgmToggle = $<HTMLButtonElement>('bgm-toggle');
 sfxToggle.addEventListener('click', () => {
@@ -561,8 +565,10 @@ async function showAdmin(): Promise<void> {
         const n = await o.resetRanking();
         myEntry = null;
         status.textContent = `${n}けん けしました`;
-      } catch {
-        status.textContent = 'しっぱい';
+      } catch (e) {
+        // Show why (e.g. permission-denied when the console still has older rules).
+        const code = (e as { code?: string }).code ?? String(e);
+        status.textContent = `しっぱい（${code}）`;
       }
     };
     $('admin-bgm').classList.remove('hidden');

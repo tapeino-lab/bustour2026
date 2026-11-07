@@ -149,9 +149,10 @@ export class Online {
   /** Deletes every ranking entry (admins only). Returns how many were removed. */
   async resetRanking(): Promise<number> {
     const snap = await getDocs(collection(this.db, 'scores'));
-    for (let i = 0; i < snap.docs.length; i += 400) {
+    // Small batches keep each request well under Firestore's per-request rule limits.
+    for (let i = 0; i < snap.docs.length; i += 10) {
       const batch = writeBatch(this.db);
-      for (const d of snap.docs.slice(i, i + 400)) batch.delete(d.ref);
+      for (const d of snap.docs.slice(i, i + 10)) batch.delete(d.ref);
       await batch.commit();
     }
     return snap.size;

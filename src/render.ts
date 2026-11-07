@@ -102,6 +102,7 @@ export function drawPiece(
   ctx.strokeStyle = INK;
   ctx.lineWidth = OUTLINE * 2;
   for (const part of p.def.parts) {
+    if (part.noOutline) continue;
     inSeg(part.seg, () => {
       tracePart(ctx, part);
       ctx.stroke();

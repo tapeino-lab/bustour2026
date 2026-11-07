@@ -11,6 +11,8 @@ interface ShapeBase {
   seg?: number;
   /** Friction of this part (default: the normal high friction). */
   friction?: number;
+  /** Drawn without the ink outline (and its collision has no outline skin either). */
+  noOutline?: boolean;
 }
 export type Shape =
   | (ShapeBase & { kind: 'rect'; x: number; y: number; w: number; h: number; round?: number })
@@ -51,7 +53,7 @@ const rect = (x: number, y: number, w: number, h: number, color: string, round =
   kind: 'rect', x, y, w, h, color, round, seg,
 });
 const circle = (x: number, y: number, r: number, color: string, seg = 0): Shape => ({ kind: 'circle', x, y, r, color, seg });
-const wheel = (x: number, y: number, r: number, color: string): Shape => ({ kind: 'circle', x, y, r, color, exact: true });
+const wheel = (x: number, y: number, r: number, color: string): Shape => ({ kind: 'circle', x, y, r, color, exact: true, noOutline: true });
 const poly = (color: string, ...points: [number, number][]): Shape => ({ kind: 'poly', points, color });
 const polySeg = (seg: number, color: string, ...points: [number, number][]): Shape => ({ kind: 'poly', points, color, seg });
 

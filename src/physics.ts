@@ -330,7 +330,7 @@ export class Physics {
       for (const s of piece.def.parts.filter((p) => (p.seg ?? 0) === i)) {
         const shape =
           s.kind === 'circle' && s.exact
-            ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + PIECE_OUTLINE) / PX)
+            ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + (s.noOutline ? 0 : PIECE_OUTLINE)) / PX)
             : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), PIECE_OUTLINE);
         body.createFixture(shape, { density: DENSITY, friction: s.friction ?? FRICTION, restitution: 0 });
       }
@@ -384,7 +384,7 @@ export class Physics {
       for (const part of piece.def.parts.filter((p) => (p.seg ?? 0) === i)) {
         const shape =
           part.kind === 'circle' && part.exact
-            ? new Circle(toMain(part.x, part.y), (part.r + PIECE_OUTLINE) / PX)
+            ? new Circle(toMain(part.x, part.y), (part.r + (part.noOutline ? 0 : PIECE_OUTLINE)) / PX)
             : withSkin(new Polygon(shapeOutline(part).map(([x, y]) => toMain(x, y))), PIECE_OUTLINE);
         main.createFixture(shape, { density: DENSITY, friction: part.friction ?? FRICTION, restitution: 0 });
       }
