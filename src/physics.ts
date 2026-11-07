@@ -358,15 +358,16 @@ export class Physics {
       const anchor = piece.localToWorld(j.x, j.y);
       const at = new Vec2(anchor.x / PX, anchor.y / PX);
       const joint = j.hinge
-        ? // A limited hinge with a little friction, so the limb swings to its limit and stays.
+        ? // A limited hinge with a little friction, so the limb swings to its limit and stays
+          // (or none at all for a loose one, which dangles).
           new RevoluteJoint(
             {
               enableLimit: true,
               lowerAngle: j.hinge[0],
               upperAngle: j.hinge[1],
-              enableMotor: true,
+              enableMotor: !j.loose,
               motorSpeed: 0,
-              maxMotorTorque: HINGE_FRICTION,
+              maxMotorTorque: j.loose ? 0 : HINGE_FRICTION,
               collideConnected: false,
             },
             bodies[j.a],

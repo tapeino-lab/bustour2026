@@ -41,6 +41,8 @@ export interface SoftJoint {
    * from its starting angle, e.g. a knee that only bends outwards.
    */
   hinge?: [number, number];
+  /** A hinge that swings freely (no friction), like a dangling tail. */
+  loose?: boolean;
 }
 
 export interface PieceDef {
@@ -270,9 +272,9 @@ const RAW_ANIMALS: PieceDef[] = [
     face: { x: -40, y: 0, r: 14, seg: 0 },
     joints: [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
-      // The tail droops but never stands up: both its joints bend mostly downwards.
-      { a: 1, b: 2, x: 31, y: 6, hinge: [-0.1, 0.45] },
-      { a: 2, b: 7, x: 50, y: 6, hinge: [-0.1, 0.6] },
+      // The tail dangles but never stands up: both its joints swing freely, mostly downwards.
+      { a: 1, b: 2, x: 31, y: 6, hinge: [-0.1, 1.0], loose: true },
+      { a: 2, b: 7, x: 50, y: 6, hinge: [-0.1, 0.8], loose: true },
       // Hips and knees only bend outwards: the front leg to the left, the back leg to the right.
       { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0] },
       { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0] },
