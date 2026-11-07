@@ -131,8 +131,8 @@ button {
   -webkit-text-stroke: 2px var(--ink);
   paint-order: stroke fill;
 }
-.best { margin: 4px 0 0; font-size: 14px; }
-.best b { font-weight: 400; }
+.best { display: flex; flex-direction: column; align-items: center; margin: 4px 0 0; font-size: 14px; line-height: 1.15; }
+.best b { font-weight: 400; font-size: 24px; }
 .newbest { margin: 6px 0 0; font-size: 16px; color: var(--red); }
 .retry {
   min-width: 210px;

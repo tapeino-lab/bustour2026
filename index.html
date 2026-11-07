@@ -38,7 +38,11 @@
             <canvas id="my-tower-canvas"></canvas>
             <span class="chip">みる</span>
           </button>
-          <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
+          <div id="over-best-block" class="best">
+            <span class="best-label">じこベスト</span>
+            <span><b id="over-best">0</b>こ</span>
+            <span><b id="over-best-height">0.0</b>m</span>
+          </div>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
         </div>
         <button id="retry" class="comic-btn retry">もういちど</button>
@@ -62,12 +66,12 @@
           <h3>ランキング</h3>
           <div class="columns">
             <div>
-              <h4>たかさ</h4>
-              <ol id="rv-height"></ol>
-            </div>
-            <div>
               <h4>こすう</h4>
               <ol id="rv-count"></ol>
+            </div>
+            <div>
+              <h4>たかさ</h4>
+              <ol id="rv-height"></ol>
             </div>
           </div>
           <button id="rename" class="comic-btn sub rename hidden">なまえを かえる</button>

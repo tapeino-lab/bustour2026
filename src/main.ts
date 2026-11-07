@@ -10,7 +10,7 @@ import {
   KANA_COLUMNS, NAME_LENGTH, isValidName, toggleDakuten, toggleHandakuten, toggleSmall, typeKana,
 } from './names';
 import { topRows, type RankingRow } from './ranking';
-import { decodeTower, towerBodies } from './tower';
+import { decodeTower, towerBodies, towerBreaker } from './tower';
 import { drawTowerImage } from './render';
 import { fetchLatestVersion, reloadToVersion } from './update';
 import { Tutorial } from './tutorial';
@@ -186,9 +186,9 @@ $('my-tower').addEventListener('click', () => showTower('こんかいの タワ�
 
 game.onGameOver = (score, height, tower) => {
   lastTower = tower;
-  // This game's tower as a thumbnail (tap to enlarge).
+  // This game's tower as a tall thumbnail (tap to enlarge).
   const myTower = score > 0 ? decodeTower(tower) : null;
-  if (myTower) drawTowerImage($<HTMLCanvasElement>('my-tower-canvas'), towerBodies(myTower), 120, 96, faces);
+  if (myTower) drawTowerImage($<HTMLCanvasElement>('my-tower-canvas'), towerBodies(myTower), 110, 150, faces);
   $('my-tower').classList.toggle('hidden', !myTower);
   const isNew = score > best || height > bestHeight;
   if (score > best) {
@@ -205,7 +205,7 @@ game.onGameOver = (score, height, tower) => {
   $('over-best-height').textContent = bestHeight.toFixed(1);
   $('new-best').classList.toggle('hidden', !isNew);
   // On a new best the best line would just repeat this game's numbers.
-  $('over-best').parentElement!.classList.toggle('hidden', isNew);
+  $('over-best-block').classList.toggle('hidden', isNew);
   sound.stopMusic();
   sound.play(isNew && score > 0 ? 'best' : 'over');
   // Members see only the score first, then "つぎへ" leads to the ranking (with もういちど there).
@@ -437,7 +437,7 @@ function showTower(name: string, record: string, snapshot: string | undefined): 
   if (!tower) return;
   const w = Math.min(300, Math.round(window.innerWidth * 0.78));
   const h = Math.min(Math.round(w * 1.35), Math.round(window.innerHeight * 0.62));
-  drawTowerImage($<HTMLCanvasElement>('tower-canvas'), towerBodies(tower), w, h, faces);
+  drawTowerImage($<HTMLCanvasElement>('tower-canvas'), towerBodies(tower), w, h, faces, towerBreaker(snapshot));
   const nameEl = document.createElement('span');
   nameEl.className = 'tt-name';
   nameEl.textContent = name;

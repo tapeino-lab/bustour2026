@@ -2,6 +2,7 @@
 // It is redrawn from this record (no physics), so it stays valid when physics settings change;
 // it only assumes the piece shapes stay the same. Format: "v1|id,x,y,angle;id,x,y,angle;…".
 // A soft piece made of several segments lists x,y,angle once per segment: "id,x,y,a,x2,y2,a2,…".
+// A game's final snapshot may end with "|id": the piece that knocked the tower over (shown as つぎ).
 import { ALL_PIECES } from './pieces';
 import { PieceBody, type Pose } from './physics';
 
@@ -18,7 +19,7 @@ export interface TowerPiece {
 
 const KNOWN_IDS = new Set(ALL_PIECES.map((p) => p.id));
 
-export function encodeTower(pieces: PieceBody[]): string {
+export function encodeTower(pieces: PieceBody[], breakerId?: string): string {
   const parts = pieces.slice(0, MAX_TOWER_PIECES).map((p) => {
     const nums = Array.from({ length: p.segments }, (_, i) => {
       const q = p.segPose(i);
@@ -26,13 +27,27 @@ export function encodeTower(pieces: PieceBody[]): string {
     });
     return `${p.def.id},${nums.join(',')}`;
   });
-  return `${VERSION}|${parts.join(';')}`;
+  return `${VERSION}|${parts.join(';')}${breakerId ? `|${breakerId}` : ''}`;
+}
+
+/** Adds the piece that knocked the tower over to a snapshot (replacing any earlier one). */
+export function withBreaker(snapshot: string, breakerId: string): string {
+  const [version, pieces] = snapshot.split('|');
+  return `${version}|${pieces ?? ''}|${breakerId}`;
+}
+
+/** The piece that knocked this tower over (ready to draw), if the snapshot records a known one. */
+export function towerBreaker(s: unknown): PieceBody | null {
+  if (typeof s !== 'string' || !s.startsWith(`${VERSION}|`)) return null;
+  const def = ALL_PIECES.find((p) => p.id === s.split('|')[2]);
+  return def ? new PieceBody(def) : null;
 }
 
 /** Parses a snapshot (it may come from other devices, so everything is checked). null if unusable. */
 export function decodeTower(s: unknown): TowerPiece[] | null {
   if (typeof s !== 'string' || s.length > MAX_TOWER_LENGTH || !s.startsWith(`${VERSION}|`)) return null;
-  const body = s.slice(VERSION.length + 1);
+  const [, body = '', breaker, ...extra] = s.split('|');
+  if (extra.length || (breaker !== undefined && !KNOWN_IDS.has(breaker))) return null;
   if (!body) return [];
   const out: TowerPiece[] = [];
   for (const item of body.split(';').slice(0, MAX_TOWER_PIECES)) {

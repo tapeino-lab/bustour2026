@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_PIECES } from './pieces';
 import { PieceBody } from './physics';
-import { decodeTower, encodeTower, MAX_TOWER_LENGTH, towerBodies } from './tower';
+import { decodeTower, encodeTower, MAX_TOWER_LENGTH, towerBodies, towerBreaker, withBreaker } from './tower';
 
 describe('tower snapshots', () => {
   it('round-trips pieces, positions and angles', () => {
@@ -64,5 +64,21 @@ describe('tower snapshots', () => {
     expect(decodeTower('v1|cat,1')).toBeNull();
     expect(decodeTower('v1|cat,1,2,3,4')).toBeNull();
     expect(decodeTower('v1|')).toEqual([]);
+    expect(decodeTower('v1|cat,1,2,3|nosuchanimal')).toBeNull();
+    expect(decodeTower('v1|cat,1,2,3|cat|cat')).toBeNull();
+  });
+
+  it('records the piece that knocked the tower over', () => {
+    const p = new PieceBody(ALL_PIECES[0]);
+    p.setPose(100, -20, 0);
+    const before = encodeTower([p]);
+    expect(towerBreaker(before)).toBeNull();
+    const after = withBreaker(before, ALL_PIECES[1].id);
+    expect(decodeTower(after)!.map((t) => t.id)).toEqual([ALL_PIECES[0].id]);
+    expect(towerBreaker(after)!.def.id).toBe(ALL_PIECES[1].id);
+    // Replacing the breaker, and a tower that fell with its very first piece.
+    expect(towerBreaker(withBreaker(after, ALL_PIECES[2].id))!.def.id).toBe(ALL_PIECES[2].id);
+    expect(decodeTower(withBreaker('v1|', ALL_PIECES[1].id))).toEqual([]);
+    expect(towerBreaker('v1|cat,1,2,3|nosuchanimal')).toBeNull();
   });
 });

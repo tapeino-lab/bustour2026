@@ -414,6 +414,7 @@ export function drawTowerImage(
   cssW: number,
   cssH: number,
   faces: FaceImages,
+  next: PieceBody | null = null,
 ): void {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.round(cssW * dpr);
@@ -448,4 +449,36 @@ export function drawTowerImage(
   ctx.setTransform(k, 0, 0, k, ox * dpr, oy * dpr);
   drawPlatform(ctx);
   for (const p of pieces) drawPiece(ctx, p, faces);
+  if (next) drawNextPanel(ctx, next, faces, cssW, dpr);
+}
+
+/** The つぎ panel in the top right corner of a tower image, like the one in the game. */
+function drawNextPanel(ctx: CanvasRenderingContext2D, next: PieceBody, faces: FaceImages, cssW: number, dpr: number): void {
+  const w = Math.round(Math.min(82, Math.max(56, cssW * 0.26)));
+  const h = Math.round(w * 0.93);
+  const x = cssW - w - 10;
+  const y = 8;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = INK;
+  ctx.fillRect(x + 3, y + 3, w, h);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(x, y, w, h);
+  const label = Math.round(w * 0.15);
+  ctx.fillStyle = INK;
+  ctx.font = `${label}px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('つぎ', x + w / 2, y + label + 4);
+  next.setPose(0, 0, 0);
+  const b = next.bounds;
+  const box = w * 0.62;
+  const s = Math.min(box / (b.maxX - b.minX), box / (b.maxY - b.minY), 0.6 * (w / 82));
+  const cx = x + w / 2;
+  const cy = y + label + 6 + (h - label - 6) / 2;
+  const k = s * dpr;
+  ctx.setTransform(k, 0, 0, k, (cx - ((b.minX + b.maxX) / 2) * s) * dpr, (cy - ((b.minY + b.maxY) / 2) * s) * dpr);
+  drawPiece(ctx, next, faces);
 }

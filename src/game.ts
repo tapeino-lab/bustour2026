@@ -2,7 +2,7 @@ import { SettleTracker, clamp, heightMeters, pieceIdForIndex } from './logic';
 import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
-import { encodeTower } from './tower';
+import { encodeTower, withBreaker } from './tower';
 import type { SoundName } from './sound';
 
 export const STEP_MS = 1000 / 60;
@@ -33,7 +33,10 @@ export class Game {
   pieces: PieceBody[] = [];
   current: PieceBody | null = null;
   next: PieceBody | null = null;
-  /** Called once per game with the piece count, the highest settled tower (m) and the last standing tower. */
+  /**
+   * Called once per game with the piece count, the highest settled tower (m) and the last standing
+   * tower (with the piece that knocked it over).
+   */
   onGameOver: (score: number, height: number, tower: string) => void = () => {};
   /** Called for moments that make a sound. */
   onSound: (name: SoundName) => void = () => {};
@@ -210,7 +213,10 @@ export class Game {
     if (this.state === 'falling') {
       if (++this.overFrames >= OVER_DELAY_FRAMES) {
         this.state = 'over';
-        this.onGameOver(this.score, this.bestHeight, this.lastTower);
+        // The first piece dropped after the last still tower is the one that knocked it over.
+        const breaker = this.pieces[this.score];
+        const tower = breaker ? withBreaker(this.lastTower, breaker.def.id) : this.lastTower;
+        this.onGameOver(this.score, this.bestHeight, tower);
       }
       return;
     }
