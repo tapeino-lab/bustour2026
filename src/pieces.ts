@@ -57,6 +57,11 @@ export interface PieceDef {
   face?: FaceSpot;
   joints?: SoftJoint[];
   /**
+   * Segments whose motion decides when a soft piece has come to rest (all by default). Floppy
+   * parts left out may still wobble a little; they are locked in place when the piece settles.
+   */
+  settleSegments?: number[];
+  /**
    * A photo drawn instead of the parts, in this local box. The photo itself is not in the
    * repository: it is uploaded on the admin page (stored like face photos, members only).
    * Without it the parts are shown as a plain silhouette.
@@ -247,8 +252,8 @@ const RAW_ANIMALS: PieceDef[] = [
   slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
-    // Very soft: the head hangs off the body on a floppy weld, the tail (base and tip) and the two
-    // legs on loose hinges, so it flops down like the real thing and its legs dangle.
+    // Very soft (ふにゃふにゃ): the head jiggles on a wobbly weld, the tail (base and tip) and the
+    // two legs hang on loose hinges, so it flops down like the real thing and its legs dangle.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
       circle(-40, 0, 18, '#f7a8c4', 0),
@@ -272,8 +277,11 @@ const RAW_ANIMALS: PieceDef[] = [
       polySeg(7, '#fbd0df', [50, 1.5], [64, 3], [64, 6], [50, 4.5]),
     ],
     face: { x: -40, y: 0, r: 14, seg: 0 },
+    // Only the body has to come to rest: the floppy head, tail and legs do not hold up the game.
+    settleSegments: [1],
     joints: [
-      { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
+      // A wobbly neck: soft and only lightly damped, so the head jiggles like jelly.
+      { a: 0, b: 1, x: -26, y: 4, hz: 1.2, damping: 0.4 },
       // The tail dangles but never stands up: both its joints swing freely, mostly downwards.
       { a: 1, b: 2, x: 31, y: 6, hinge: [-0.1, 1.0], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.1, 0.8], loose: true },

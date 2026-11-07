@@ -286,10 +286,17 @@ export class PieceBody {
     return false;
   }
 
-  /** Fastest segment speed in px per step. */
+  /** Bodies that count for coming to rest (see PieceDef.settleSegments). */
+  private get settleBodies(): Body[] {
+    const segs = this.def.settleSegments;
+    if (!segs || this.bodies.length < 2) return this.bodies;
+    return segs.map((i) => this.bodies[i]).filter((b) => b);
+  }
+
+  /** Fastest (settle) segment speed in px per step. */
   get speed(): number {
     let v = 0;
-    for (const b of this.bodies) {
+    for (const b of this.settleBodies) {
       const l = b.getLinearVelocity();
       v = Math.max(v, (Math.hypot(l.x, l.y) * PX) / 60);
     }
@@ -299,7 +306,7 @@ export class PieceBody {
   /** Fastest segment angular speed in radians per step. */
   get angularSpeed(): number {
     let w = 0;
-    for (const b of this.bodies) w = Math.max(w, Math.abs(b.getAngularVelocity()) / 60);
+    for (const b of this.settleBodies) w = Math.max(w, Math.abs(b.getAngularVelocity()) / 60);
     return w;
   }
 }
