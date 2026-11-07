@@ -14,12 +14,23 @@ describe('tower snapshots', () => {
     const back = decodeTower(s)!;
     expect(back.map((t) => t.id)).toEqual(pieces.map((p) => p.def.id));
     back.forEach((t, i) => {
-      expect(t.x).toBeCloseTo(pieces[i].x, 1);
-      expect(t.y).toBeCloseTo(pieces[i].y, 1);
-      expect(t.angle).toBeCloseTo(pieces[i].angle, 3);
+      expect(t.poses[0].x).toBeCloseTo(pieces[i].x, 1);
+      expect(t.poses[0].y).toBeCloseTo(pieces[i].y, 1);
+      expect(t.poses[0].angle).toBeCloseTo(pieces[i].angle, 3);
     });
     const bodies = towerBodies(back);
     expect(bodies[2].angle).toBeCloseTo(pieces[2].angle, 3);
+  });
+
+  it('keeps each segment of a soft piece', () => {
+    const soft = new PieceBody(ALL_PIECES.find((d) => d.id === 'axolotl')!);
+    expect(soft.segments).toBe(3);
+    soft.setPose(100, -50, 0);
+    soft.setSegPose(2, { x: 104, y: -46, angle: 0.3 });
+    const [back] = towerBodies(decodeTower(encodeTower([soft]))!);
+    expect(back.segPose(0).x).toBeCloseTo(100, 1);
+    expect(back.segPose(2).y).toBeCloseTo(-46, 1);
+    expect(back.segPose(2).angle).toBeCloseTo(0.3, 3);
   });
 
   it('keeps a 50-piece tower well under the size limit', () => {
@@ -37,6 +48,7 @@ describe('tower snapshots', () => {
     expect(decodeTower('v1|nosuchanimal,1,2,3')).toBeNull();
     expect(decodeTower('v1|cat,1,NaN,3')).toBeNull();
     expect(decodeTower('v1|cat,1')).toBeNull();
+    expect(decodeTower('v1|cat,1,2,3,4')).toBeNull();
     expect(decodeTower('v1|')).toEqual([]);
   });
 });

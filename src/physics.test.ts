@@ -79,4 +79,22 @@ describe('physics', () => {
     expect(Math.abs(groundGap)).toBeLessThan(0.6);
     expect(Math.abs(stackGap)).toBeLessThan(0.6);
   });
+
+  it('the soft axolotl sags over an edge, then comes to rest', () => {
+    const physics = new Physics();
+    const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
+    // Body on the platform, head sticking out past the left edge.
+    const left = WORLD_WIDTH / 2 - 115;
+    const p = new PieceBody(def, left + 26, GROUND_TOP - 40);
+    physics.add(p);
+    const tracker = new SettleTracker(40, 100000);
+    let settledAt = -1;
+    for (let i = 0; i < 900; i++) {
+      physics.step();
+      if (settledAt < 0 && tracker.update([{ speed: p.speed, angularSpeed: p.angularSpeed }])) settledAt = i;
+    }
+    const bend = Math.abs(p.segPose(0).angle - p.segPose(1).angle);
+    expect(bend).toBeGreaterThan(0.03);
+    expect(settledAt).toBeGreaterThan(0);
+  });
 });

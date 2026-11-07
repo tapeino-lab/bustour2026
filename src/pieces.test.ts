@@ -30,6 +30,7 @@ describe('pieces', () => {
   it('uses only convex outlines of at most 12 vertices', () => {
     for (const p of ALL_PIECES) {
       for (const s of p.parts) {
+        if (s.kind === 'circle' && s.exact) continue; // a true circle in physics
         const pts = shapeOutline(s);
         expect(isConvex(pts), `${p.id}`).toBe(true);
         expect(pts.length).toBeLessThanOrEqual(12);
@@ -43,9 +44,11 @@ describe('pieces', () => {
       const p = new PieceBody(def, 100, 50);
       physics.add(p);
       let fixtures = 0;
-      for (let f = p.body!.getFixtureList(); f; f = f.getNext()) fixtures++;
+      for (const b of p.bodies) {
+        for (let f = b.getFixtureList(); f; f = f.getNext()) fixtures++;
+        expect(b.getMass()).toBeGreaterThan(0);
+      }
       expect(fixtures).toBe(def.parts.length);
-      expect(p.body!.getMass()).toBeGreaterThan(0);
       const o = p.localToWorld(0, 0);
       expect(o.x).toBeCloseTo(100, 6);
       expect(o.y).toBeCloseTo(50, 6);

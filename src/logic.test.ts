@@ -3,19 +3,20 @@ import { SettleTracker, heightMeters, pieceIdForIndex } from './logic';
 import { ANIMALS, BUS } from './pieces';
 
 describe('pieceIdForIndex', () => {
-  it('gives the bus first and on every number ending in 0', () => {
-    for (const n of [1, 10, 20, 30, 100]) expect(pieceIdForIndex(n, () => 0.5)).toBe(BUS.id);
-    for (const n of [2, 9, 11, 21, 101]) expect(pieceIdForIndex(n, () => 0.5)).not.toBe(BUS.id);
+  it('gives the bus first and never again', () => {
+    expect(pieceIdForIndex(1, () => 0.5)).toBe(BUS.id);
+    for (const n of [2, 10, 11, 20, 100]) expect(pieceIdForIndex(n, () => 0.5)).not.toBe(BUS.id);
   });
-  it('gives an animal otherwise, covering every animal', () => {
+  it('covers every animal', () => {
     const ids = new Set<string>();
-    for (let i = 0; i < ANIMALS.length; i++) {
-      const id = pieceIdForIndex(2, () => (i + 0.5) / ANIMALS.length);
-      expect(id).not.toBe(BUS.id);
-      ids.add(id);
-    }
+    for (let i = 0; i < ANIMALS.length; i++) ids.add(pieceIdForIndex(2, () => (i + 0.5) / ANIMALS.length));
     expect(ids.size).toBe(ANIMALS.length);
     expect(pieceIdForIndex(9, () => 0.9999999)).toBe(ANIMALS[ANIMALS.length - 1].id);
+  });
+  it('never repeats the previous animal', () => {
+    for (const prev of ANIMALS) {
+      for (let k = 0; k < 20; k++) expect(pieceIdForIndex(5, () => k / 20, prev.id)).not.toBe(prev.id);
+    }
   });
 });
 

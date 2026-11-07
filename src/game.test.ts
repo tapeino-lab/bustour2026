@@ -147,3 +147,19 @@ describe('game over timing', () => {
     expect(piece.touching).toBe(false);
   });
 });
+
+describe('piece order', () => {
+  it('starts with the bus and never shows the same animal twice in a row', () => {
+    const g = new Game(seeded(7), 700);
+    g.start();
+    expect(g.current!.def.id).toBe('bus');
+    const ids: string[] = [];
+    for (let i = 0; i < 60; i++) {
+      ids.push(g.next!.def.id);
+      // Advance the queue without playing: spawn the next piece directly.
+      (g as unknown as { spawn(): void }).spawn();
+    }
+    expect(ids).not.toContain('bus');
+    for (let i = 1; i < ids.length; i++) expect(ids[i]).not.toBe(ids[i - 1]);
+  });
+});

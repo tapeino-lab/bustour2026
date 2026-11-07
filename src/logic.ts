@@ -1,13 +1,16 @@
 import { ANIMALS, BUS } from './pieces';
 
-export const BUS_INTERVAL = 10;
 export const PX_PER_METER = 50;
 
-/** Which piece comes as the n-th piece (1-based). The bus comes first, then on every number ending in 0. */
-export function pieceIdForIndex(n: number, rand: () => number): string {
-  if (n === 1 || (n > 0 && n % BUS_INTERVAL === 0)) return BUS.id;
-  const i = Math.min(ANIMALS.length - 1, Math.floor(rand() * ANIMALS.length));
-  return ANIMALS[i].id;
+/**
+ * Which piece comes as the n-th piece (1-based): the bus first (only then), and after that a
+ * random animal that is never the same as the previous one (`prevId`).
+ */
+export function pieceIdForIndex(n: number, rand: () => number, prevId?: string): string {
+  if (n === 1) return BUS.id;
+  const choices = ANIMALS.filter((a) => a.id !== prevId);
+  const i = Math.min(choices.length - 1, Math.floor(rand() * choices.length));
+  return choices[i].id;
 }
 
 export function heightMeters(px: number): number {

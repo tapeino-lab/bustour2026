@@ -1,5 +1,5 @@
-import { Box, Polygon, Vec2, World, type Body } from 'planck';
-import type { PieceDef, Shape } from './pieces';
+import { Box, Circle, Polygon, Vec2, WeldJoint, World, type Body } from 'planck';
+import { segmentCount, type PieceDef, type Shape } from './pieces';
 
 // All values outside this file are in logical pixels and "per step" (1/60 s) units,
 // y pointing down. planck.js works in metres and seconds internally.
@@ -73,8 +73,10 @@ export function shapeOutline(s: Shape): Pt[] {
     }
     case 'circle': {
       const pts: Pt[] = [];
-      for (let i = 0; i < CIRCLE_SIDES; i++) {
-        const a = (Math.PI * 2 * i) / CIRCLE_SIDES;
+      // Exact circles (wheels) are true circles in physics; these points only serve bounds.
+      const sides = s.exact ? 24 : CIRCLE_SIDES;
+      for (let i = 0; i < sides; i++) {
+        const a = (Math.PI * 2 * i) / sides;
         pts.push([s.x + s.r * Math.cos(a), s.y + s.r * Math.sin(a)]);
       }
       return pts;
@@ -91,144 +93,176 @@ export interface Bounds {
   maxY: number;
 }
 
+export interface Pose {
+  x: number;
+  y: number;
+  angle: number;
+}
+
 /**
- * A piece. Before it is dropped it only has a pose (aiming / preview);
- * once dropped it is backed by a planck.js body.
+ * A piece. Before it is dropped it only has a pose (aiming / preview / tower snapshot);
+ * once dropped it is backed by planck.js bodies: one per segment (most pieces have one).
+ * All segments share the piece's local coordinates, so at rest they all sit at the same pose.
  */
 export class PieceBody {
-  body: Body | null = null;
-  private px: number;
-  private py: number;
-  private ang = 0;
-  private readonly outline: Pt[];
-  /** Pose before the last physics step, for drawing between steps. */
-  private prevX: number;
-  private prevY: number;
-  private prevAngle = 0;
+  /** One body per segment once the piece is in the world. */
+  bodies: Body[] = [];
+  readonly segments: number;
+  /** Poses while not in the world, per segment. */
+  private poses: Pose[];
+  /** Poses before the last physics step, for drawing between steps. */
+  private prev: Pose[];
+  /** Outline points per segment (local px). */
+  private readonly outlines: Pt[][];
   private boundsCache: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-  private boundsKey = [NaN, NaN, NaN];
+  private boundsKey: number[] = [];
 
   constructor(
     readonly def: PieceDef,
     x = 0,
     y = 0,
   ) {
-    this.px = x;
-    this.py = y;
-    this.prevX = x;
-    this.prevY = y;
-    this.outline = def.parts.flatMap(shapeOutline);
+    this.segments = segmentCount(def);
+    this.poses = Array.from({ length: this.segments }, () => ({ x, y, angle: 0 }));
+    this.prev = this.poses.map((p) => ({ ...p }));
+    this.outlines = Array.from({ length: this.segments }, (_, i) =>
+      def.parts.filter((s) => (s.seg ?? 0) === i).flatMap(shapeOutline),
+    );
   }
 
-  /** Remembers the current pose; call right before each physics step. */
+  /** The main body (segment 0), or null before the piece is dropped. */
+  get body(): Body | null {
+    return this.bodies[0] ?? null;
+  }
+
+  /** Current pose of a segment. */
+  segPose(i: number): Pose {
+    const b = this.bodies[i];
+    if (!b) return this.poses[i];
+    const p = b.getPosition();
+    return { x: p.x * PX, y: p.y * PX, angle: b.getAngle() };
+  }
+
+  /** Remembers the current poses; call right before each physics step. */
   savePrev(): void {
-    this.prevX = this.x;
-    this.prevY = this.y;
-    this.prevAngle = this.angle;
+    for (let i = 0; i < this.segments; i++) this.prev[i] = this.segPose(i);
   }
 
-  /** Pose to draw: between the previous and current step by `alpha` (0..1). */
-  drawPose(alpha: number): { x: number; y: number; angle: number } {
-    if (!this.body) return { x: this.px, y: this.py, angle: this.ang };
+  /** Pose of a segment to draw: between the previous and current step by `alpha` (0..1). */
+  drawSegPose(i: number, alpha: number): Pose {
+    const cur = this.segPose(i);
+    if (!this.bodies[i]) return cur;
     const t = Math.max(0, Math.min(1, alpha));
-    return {
-      x: this.prevX + (this.x - this.prevX) * t,
-      y: this.prevY + (this.y - this.prevY) * t,
-      angle: this.prevAngle + (this.angle - this.prevAngle) * t,
-    };
+    const p = this.prev[i];
+    return { x: p.x + (cur.x - p.x) * t, y: p.y + (cur.y - p.y) * t, angle: p.angle + (cur.angle - p.angle) * t };
+  }
+
+  drawPose(alpha: number): Pose {
+    return this.drawSegPose(0, alpha);
   }
 
   /** Scales gravity for this piece (used for the gentle first fall). */
   setGravityScale(scale: number): void {
-    this.body?.setGravityScale(scale);
+    for (const b of this.bodies) b.setGravityScale(scale);
   }
 
   get x(): number {
-    return this.body ? this.body.getPosition().x * PX : this.px;
+    return this.segPose(0).x;
   }
   get y(): number {
-    return this.body ? this.body.getPosition().y * PX : this.py;
+    return this.segPose(0).y;
   }
   get angle(): number {
-    return this.body ? this.body.getAngle() : this.ang;
+    return this.segPose(0).angle;
   }
 
-  /** Moves a piece that is not in the world yet. */
-  setPose(x: number, y: number, angle = this.ang): void {
-    this.px = x;
-    this.py = y;
-    this.ang = angle;
-    if (this.body) this.body.setTransform(new Vec2(x / PX, y / PX), angle);
+  /** Moves the whole piece (all segments together, rigidly). */
+  setPose(x: number, y: number, angle = this.poses[0].angle): void {
+    for (let i = 0; i < this.segments; i++) this.setSegPose(i, { x, y, angle });
+  }
+
+  /** Moves one segment (used when restoring a tower snapshot of a soft piece). */
+  setSegPose(i: number, pose: Pose): void {
+    this.poses[i] = { ...pose };
+    this.bodies[i]?.setTransform(new Vec2(pose.x / PX, pose.y / PX), pose.angle);
     // A teleport is not motion: drawing must not blend from the old pose.
-    this.savePrev();
+    this.prev[i] = { ...pose };
   }
 
-  /** Local pixel coordinate → world pixel coordinate, using the current pose. */
+  /** Local pixel coordinate of segment 0 → world pixel coordinate. */
   localToWorld(lx: number, ly: number): { x: number; y: number } {
-    const c = Math.cos(this.angle);
-    const s = Math.sin(this.angle);
-    return { x: this.x + lx * c - ly * s, y: this.y + lx * s + ly * c };
+    const p = this.segPose(0);
+    const c = Math.cos(p.angle);
+    const s = Math.sin(p.angle);
+    return { x: p.x + lx * c - ly * s, y: p.y + lx * s + ly * c };
   }
 
-  /** Axis-aligned bounds in world pixels (cached until the pose changes; do not mutate). */
+  /** Axis-aligned bounds in world pixels (cached until a pose changes; do not mutate). */
   get bounds(): Bounds {
-    const x = this.x;
-    const y = this.y;
-    const a = this.angle;
-    const k = this.boundsKey;
-    if (k[0] === x && k[1] === y && k[2] === a) return this.boundsCache;
-    const c = Math.cos(a);
-    const s = Math.sin(a);
+    const poses = Array.from({ length: this.segments }, (_, i) => this.segPose(i));
+    const key = poses.flatMap((p) => [p.x, p.y, p.angle]);
+    if (key.length === this.boundsKey.length && key.every((v, i) => v === this.boundsKey[i])) return this.boundsCache;
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    for (const [lx, ly] of this.outline) {
-      const wx = x + lx * c - ly * s;
-      const wy = y + lx * s + ly * c;
-      if (wx < minX) minX = wx;
-      if (wx > maxX) maxX = wx;
-      if (wy < minY) minY = wy;
-      if (wy > maxY) maxY = wy;
-    }
+    poses.forEach((p, i) => {
+      const c = Math.cos(p.angle);
+      const s = Math.sin(p.angle);
+      for (const [lx, ly] of this.outlines[i]) {
+        const wx = p.x + lx * c - ly * s;
+        const wy = p.y + lx * s + ly * c;
+        if (wx < minX) minX = wx;
+        if (wx > maxX) maxX = wx;
+        if (wy < minY) minY = wy;
+        if (wy > maxY) maxY = wy;
+      }
+    });
     this.boundsCache = { minX, minY, maxX, maxY };
-    k[0] = x;
-    k[1] = y;
-    k[2] = a;
+    this.boundsKey = key;
     return this.boundsCache;
   }
 
   /** Largest distance from the local origin to the outline. */
   get radius(): number {
-    return this.outline.reduce((r, [x, y]) => Math.max(r, Math.hypot(x, y)), 0);
+    return this.outlines.flat().reduce((r, [x, y]) => Math.max(r, Math.hypot(x, y)), 0);
   }
 
-  /** Vertical velocity in px per step. */
+  /** Vertical velocity in px per step (main segment). */
   get velocityY(): number {
     return this.body ? (this.body.getLinearVelocity().y * PX) / 60 : 0;
   }
 
-  /** True while the piece is in contact with anything (another piece or the platform). */
+  /** True while the piece is in contact with anything else (another piece or the platform). */
   get touching(): boolean {
-    if (!this.body) return false;
-    for (let ce = this.body.getContactList(); ce; ce = ce.next ?? null) {
-      if (ce.contact.isTouching()) return true;
+    for (const b of this.bodies) {
+      for (let ce = b.getContactList(); ce; ce = ce.next ?? null) {
+        if (ce.contact.isTouching() && ce.other?.getUserData() !== this) return true;
+      }
     }
     return false;
   }
 
-  /** Speed in px per step. */
+  /** Fastest segment speed in px per step. */
   get speed(): number {
-    if (!this.body) return 0;
-    const v = this.body.getLinearVelocity();
-    return (Math.hypot(v.x, v.y) * PX) / 60;
+    let v = 0;
+    for (const b of this.bodies) {
+      const l = b.getLinearVelocity();
+      v = Math.max(v, (Math.hypot(l.x, l.y) * PX) / 60);
+    }
+    return v;
   }
 
-  /** Angular speed in radians per step. */
+  /** Fastest segment angular speed in radians per step. */
   get angularSpeed(): number {
-    return this.body ? Math.abs(this.body.getAngularVelocity()) / 60 : 0;
+    let w = 0;
+    for (const b of this.bodies) w = Math.max(w, Math.abs(b.getAngularVelocity()) / 60);
+    return w;
   }
 }
+
+/** Soft welds: springy enough to sag, damped enough not to keep wobbling. */
+const SOFT_WELD = { frequencyHz: 3.5, dampingRatio: 1 };
 
 export class Physics {
   readonly world: World;
@@ -246,28 +280,43 @@ export class Physics {
       friction: FRICTION,
     });
     this.world.on('begin-contact', (c) => {
-      for (const f of [c.getFixtureA(), c.getFixtureB()]) {
-        const piece = f.getBody().getUserData() as PieceBody | null;
-        if (piece) this.onContact(piece);
-      }
+      const a = c.getFixtureA().getBody().getUserData() as PieceBody | null;
+      const b = c.getFixtureB().getBody().getUserData() as PieceBody | null;
+      if (a === b) return; // two segments of the same piece
+      if (a) this.onContact(a);
+      if (b) this.onContact(b);
     });
   }
 
   /** Puts a piece into the world at its current pose, at rest. */
   add(piece: PieceBody): void {
-    const body = this.world.createBody({
-      type: 'dynamic',
-      position: new Vec2(piece.x / PX, piece.y / PX),
-      angle: piece.angle,
-      linearDamping: LINEAR_DAMPING,
-      angularDamping: ANGULAR_DAMPING,
-      userData: piece,
-    });
-    for (const s of piece.def.parts) {
-      const verts = shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX));
-      body.createFixture(withSkin(new Polygon(verts), PIECE_OUTLINE), { density: DENSITY, friction: FRICTION, restitution: 0 });
+    const bodies: Body[] = [];
+    for (let i = 0; i < piece.segments; i++) {
+      const pose = piece.segPose(i);
+      const body = this.world.createBody({
+        type: 'dynamic',
+        position: new Vec2(pose.x / PX, pose.y / PX),
+        angle: pose.angle,
+        linearDamping: LINEAR_DAMPING,
+        angularDamping: ANGULAR_DAMPING,
+        userData: piece,
+      });
+      for (const s of piece.def.parts.filter((p) => (p.seg ?? 0) === i)) {
+        const shape =
+          s.kind === 'circle' && s.exact
+            ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + PIECE_OUTLINE) / PX)
+            : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), PIECE_OUTLINE);
+        body.createFixture(shape, { density: DENSITY, friction: FRICTION, restitution: 0 });
+      }
+      bodies.push(body);
     }
-    piece.body = body;
+    for (const j of piece.def.joints ?? []) {
+      const anchor = piece.localToWorld(j.x, j.y);
+      this.world.createJoint(
+        new WeldJoint({ ...SOFT_WELD, collideConnected: false }, bodies[j.a], bodies[j.b], new Vec2(anchor.x / PX, anchor.y / PX)),
+      );
+    }
+    piece.bodies = bodies;
     piece.savePrev();
   }
 

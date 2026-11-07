@@ -9,6 +9,8 @@ export interface View {
   viewH: number;
   /** World y shown at the top of the screen. */
   camTop: number;
+  /** How far (logical px) the distant scenery has scrolled down; it moves slower than the tower. */
+  bgShift?: number;
 }
 
 export type FaceImages = Map<string, HTMLImageElement>;
@@ -24,6 +26,11 @@ const outlines = new Map<Shape, [number, number][]>();
 
 /** Body parts use the same outline as the physics, so what you see is what collides. */
 function tracePart(ctx: CanvasRenderingContext2D, s: Shape): void {
+  if (s.kind === 'circle' && s.exact) {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    return;
+  }
   let pts = outlines.get(s);
   if (!pts) {
     pts = shapeOutline(s);
@@ -78,59 +85,72 @@ export function drawPiece(
   alpha = 1,
   scale = 1,
 ): void {
-  const pose = p.drawPose(alpha);
-  ctx.save();
-  ctx.translate(pose.x, pose.y);
-  ctx.rotate(pose.angle);
-  if (scale !== 1) ctx.scale(scale, scale);
+  // Each segment of the piece is drawn in its own pose (most pieces have just one).
+  const poses = Array.from({ length: p.segments }, (_, i) => p.drawSegPose(i, alpha));
+  const inSeg = (seg: number | undefined, draw: () => void) => {
+    const pose = poses[seg ?? 0];
+    ctx.save();
+    ctx.translate(pose.x, pose.y);
+    ctx.rotate(pose.angle);
+    if (scale !== 1) ctx.scale(scale, scale);
+    draw();
+    ctx.restore();
+  };
   // Comic ink: one thick outline around the whole silhouette (strokes first, fills on top),
   // so the parts read as one body.
   ctx.lineJoin = 'round';
   ctx.strokeStyle = INK;
   ctx.lineWidth = OUTLINE * 2;
   for (const part of p.def.parts) {
-    tracePart(ctx, part);
-    ctx.stroke();
+    inSeg(part.seg, () => {
+      tracePart(ctx, part);
+      ctx.stroke();
+    });
   }
   for (const part of p.def.parts) {
-    tracePart(ctx, part);
-    ctx.fillStyle = part.color;
-    ctx.fill();
+    inSeg(part.seg, () => {
+      tracePart(ctx, part);
+      ctx.fillStyle = part.color;
+      ctx.fill();
+    });
   }
-
   for (const d of p.def.details ?? []) {
-    traceDetail(ctx, d);
-    ctx.fillStyle = d.color;
-    ctx.fill();
+    inSeg(d.seg, () => {
+      traceDetail(ctx, d);
+      ctx.fillStyle = d.color;
+      ctx.fill();
+    });
   }
   const f = p.def.face;
   if (f) {
-    ctx.save();
-    ctx.translate(f.x, f.y);
-    const img = faces.get(p.def.id);
-    if (img) {
-      ctx.save();
+    inSeg(f.seg, () => {
+      ctx.translate(f.x, f.y);
+      const img = faces.get(p.def.id);
+      if (img) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, f.r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, -f.r, -f.r, f.r * 2, f.r * 2);
+        ctx.restore();
+      } else {
+        drawDummyFace(ctx, f.r);
+      }
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(0, 0, f.r, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(img, -f.r, -f.r, f.r * 2, f.r * 2);
-      ctx.restore();
-    } else {
-      drawDummyFace(ctx, f.r);
-    }
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, f.r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+      ctx.stroke();
+    });
   }
-  ctx.restore();
 }
 
 // The sky is pre-rendered once per screen size and copied each frame onto an opaque canvas.
 // (A transparent canvas redrawn every frame over a CSS background can flicker on iOS Safari.)
 let background: HTMLCanvasElement | null = null;
+/** Mt. Fuji on its own transparent layer, so it can scroll as distant scenery. */
+let scenery: HTMLCanvasElement | null = null;
+let sceneryScale = 1;
 
 /** Builds the comic sky (gradient, rays, halftone dots) for a canvas of w×h device pixels. */
 export function buildBackground(w: number, h: number, k: number): void {
@@ -169,8 +189,16 @@ export function buildBackground(w: number, h: number, k: number): void {
     }
   }
   g.fill();
-  drawFuji(g, W, H);
   background = c;
+
+  const f = scenery ?? document.createElement('canvas');
+  f.width = w;
+  f.height = h;
+  const fg = f.getContext('2d')!;
+  fg.setTransform(k, 0, 0, k, 0, 0);
+  drawFuji(fg, W, H);
+  scenery = f;
+  sceneryScale = k;
 }
 
 /** Comic-style Mt. Fuji filling the lower part of the screen, with a snow cap and clouds. */
@@ -250,8 +278,12 @@ function drawFuji(g: CanvasRenderingContext2D, W: number, H: number): void {
   cloud(W * 0.86, peakY + H * 0.04, 13);
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D): void {
-  if (background) ctx.drawImage(background, 0, 0);
+function drawBackground(ctx: CanvasRenderingContext2D, shift: number): void {
+  if (background) {
+    ctx.drawImage(background, 0, 0);
+    // The mountain sinks as the tower (and the camera) goes up.
+    if (scenery) ctx.drawImage(scenery, 0, Math.round(shift * sceneryScale));
+  }
   else {
     ctx.fillStyle = '#36b6ec';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -347,7 +379,7 @@ export function drawWorld(
 ): void {
   const k = view.scale * view.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  drawBackground(ctx);
+  drawBackground(ctx, view.bgShift ?? 0);
 
   ctx.setTransform(k, 0, 0, k, 0, -view.camTop * k);
   drawPlatform(ctx);

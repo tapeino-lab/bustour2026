@@ -16,6 +16,8 @@ const GROUND_FROM_BOTTOM = 190;
 const OVER_DELAY_FRAMES = 1;
 /** A piece this far below the screen bottom ends the game even if it is still touching something. */
 const FAR_BELOW = 200;
+/** How fast the background mountain scrolls compared with the tower. */
+const BG_PARALLAX = 0.3;
 /** A new piece pops out of a smoke cloud: it grows to full size over this many steps… */
 export const APPEAR_FRAMES = 24;
 /** …while the cloud lasts this long. */
@@ -101,7 +103,8 @@ export class Game {
   private spawn(): void {
     this.count++;
     this.current = this.next;
-    this.next = new PieceBody(pieceById(pieceIdForIndex(this.count + 1, this.rand)));
+    // Never the same kind twice in a row.
+    this.next = new PieceBody(pieceById(pieceIdForIndex(this.count + 1, this.rand, this.current?.def.id)));
     if (!this.current) return;
     this.angle = 0;
     this.radius = this.current.radius;
@@ -251,7 +254,9 @@ export class Game {
   /** `alpha` (0..1) is how far we are between the last physics step and the next one. */
   render(ctx: CanvasRenderingContext2D, scale: number, dpr: number, faces: FaceImages, alpha = 1): void {
     this.updateCamera();
-    const view: View = { scale, dpr, viewH: this.viewH, camTop: this.camTop };
+    // Distant scenery scrolls at 30% of the camera's speed.
+    const bgShift = Math.max(0, (this.baseCamTop() - this.camTop) * BG_PARALLAX);
+    const view: View = { scale, dpr, viewH: this.viewH, camTop: this.camTop, bgShift };
     drawWorld(ctx, view, this.pieces, this.current, faces, alpha, this.current ? this.appearScale : 1);
     if (this.state === 'idle') return;
 
