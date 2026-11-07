@@ -68,7 +68,11 @@ function startTutorial(): void {
 let pendingUpdate: string | null = null;
 
 // Diagnostics are on by default until release; ?debug=0 hides them.
-const debug = params.get('debug') === '0' ? null : new DebugOverlay(app);
+// Diagnostics: shown only on admin devices (decided after sign-in), or with ?debug=1; ?debug=0 hides them.
+let debug: DebugOverlay | null = params.get('debug') === '1' ? new DebugOverlay(app) : null;
+function showDiagnostics(): void {
+  if (!debug && params.get('debug') !== '0') debug = new DebugOverlay(app);
+}
 const BROWSER = /Firefox\/(\d+)/.exec(navigator.userAgent)?.[0] ?? /Chrome\/(\d+)/.exec(navigator.userAgent)?.[0] ?? 'other';
 /** Interpolation factor of the last frame, reused when a resize forces an extra draw. */
 let lastAlpha = 1;
@@ -589,6 +593,7 @@ async function initOnline(): Promise<void> {
   if (member) await becomeMember().catch(() => undefined);
   // Devices without the code are asked at every launch.
   else showJoin();
+  if (await online.isAdmin().catch(() => false)) showDiagnostics();
   if (params.get('admin') === '1') await showAdmin().catch(() => undefined);
 }
 
