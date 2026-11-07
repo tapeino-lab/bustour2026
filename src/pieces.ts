@@ -286,12 +286,12 @@ const RAW_ANIMALS: PieceDef[] = [
       { a: 1, b: 2, x: 31, y: 6, hinge: [-0.6, 1.2], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.6, 1.0], loose: true },
       // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
-      // the back leg to the right), so they never tuck in under the body; once landed hips and
-      // knees turn freely all the way round.
-      { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0], landed: 'free', loose: true },
-      { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0], landed: 'free', loose: true },
-      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: 'free', loose: true },
-      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8], landed: 'free', loose: true },
+      // the back leg to the right), so they never tuck in under the body; once landed they turn
+      // almost all the way round outwards but only a little inwards, so they mostly splay out.
+      { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0], landed: [-2.6, 0.25], loose: true },
+      { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0], landed: [-2.6, 0.3], loose: true },
+      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: [-0.25, 2.6], loose: true },
+      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8], landed: [-0.3, 2.6], loose: true },
     ],
   },
   {

@@ -41,6 +41,17 @@ const DENSITY = 1;
 /** Air damping on pieces: steadier landings and calmer towers. */
 const LINEAR_DAMPING = 0.1;
 const ANGULAR_DAMPING = 0.1;
+/**
+ * A landed soft piece whose every segment moves only a little is calmed down: its damping rises
+ * over CALM_STEPS steps up to these values, so the last small jiggles die out quickly and
+ * smoothly (instead of wobbling on and holding up the next piece). Any bigger motion, such as a
+ * hit, resets it.
+ */
+const CALM_SPEED = 1.2; // px per step
+const CALM_ANGULAR = 0.04; // rad per step
+const CALM_STEPS = 20;
+const CALM_LINEAR_DAMPING = 4;
+const CALM_ANGULAR_DAMPING = 10;
 /** Circles are slightly faceted so round animals do not roll forever. */
 const CIRCLE_SIDES = 10;
 /** Points per corner when approximating a rounded rectangle (max 12 vertices per polygon). */
@@ -113,6 +124,8 @@ export class PieceBody {
   joints: Joint[] = [];
   /** True once the dropped piece has touched something (another piece or the platform). */
   landed = false;
+  /** Steps in a row that this landed soft piece has only moved a little (see CALM_SPEED). */
+  calmSteps = 0;
   /** True once a soft piece has been locked into its current shape. */
   frozen = false;
   readonly segments: number;
@@ -323,6 +336,8 @@ export class Physics {
   onContact: (piece: PieceBody) => void = () => {};
   /** Pieces that touched something for the first time during the current step. */
   private justLanded = new Set<PieceBody>();
+  /** Pieces made of several segments, until they are frozen. */
+  private softPieces = new Set<PieceBody>();
 
   constructor() {
     this.world = new World({ gravity: new Vec2(0, GRAVITY / PX) });
@@ -402,6 +417,7 @@ export class Physics {
       if (created) piece.joints.push(created);
     }
     piece.bodies = bodies;
+    if (bodies.length > 1) this.softPieces.add(piece);
     piece.savePrev();
   }
 
@@ -441,6 +457,10 @@ export class Physics {
     piece.bodies = [main];
     piece.setRigidOffsets(rel);
     piece.frozen = true;
+    // Back to the normal damping of a rigid piece, so the tower still topples naturally.
+    this.softPieces.delete(piece);
+    main.setLinearDamping(LINEAR_DAMPING);
+    main.setAngularDamping(ANGULAR_DAMPING);
   }
 
   step(): void {
@@ -458,6 +478,22 @@ export class Physics {
       });
     }
     this.justLanded.clear();
+    for (const p of this.softPieces) this.calm(p);
+  }
+
+  /** Damps a landed soft piece more and more while it only jiggles a little. */
+  private calm(p: PieceBody): void {
+    if (p.frozen || !p.landed) return;
+    const small = p.bodies.every((b) => {
+      const v = b.getLinearVelocity();
+      return (Math.hypot(v.x, v.y) * PX) / 60 < CALM_SPEED && Math.abs(b.getAngularVelocity()) / 60 < CALM_ANGULAR;
+    });
+    p.calmSteps = small ? Math.min(CALM_STEPS, p.calmSteps + 1) : 0;
+    const k = p.calmSteps / CALM_STEPS;
+    for (const b of p.bodies) {
+      b.setLinearDamping(LINEAR_DAMPING + (CALM_LINEAR_DAMPING - LINEAR_DAMPING) * k);
+      b.setAngularDamping(ANGULAR_DAMPING + (CALM_ANGULAR_DAMPING - ANGULAR_DAMPING) * k);
+    }
   }
 }
 

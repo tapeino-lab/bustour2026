@@ -98,7 +98,7 @@ describe('physics', () => {
     expect(settledAt).toBeGreaterThan(0);
   });
 
-  it('axolotl legs only bend outwards while falling, then turn freely once landed', () => {
+  it('axolotl legs only bend outwards while falling, then mostly outwards once landed', () => {
     const physics = new Physics();
     const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
     const p = new PieceBody(def, WORLD_WIDTH / 2, GROUND_TOP - 200);
@@ -114,8 +114,33 @@ describe('physics', () => {
       }
     }
     expect(p.landed).toBe(true);
+    // Once landed the front hip turns far outwards (left) but only a little inwards.
     const hip = p.joints[3] as RevoluteJoint;
-    expect(hip.isLimitEnabled()).toBe(false);
+    expect(hip.getLowerLimit()).toBeCloseTo(-2.6);
+    expect(hip.getUpperLimit()).toBeCloseTo(0.25);
+  });
+
+  it('a landed soft piece calms down quickly instead of jiggling on', () => {
+    const physics = new Physics();
+    const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
+    const p = new PieceBody(def, WORLD_WIDTH / 2, GROUND_TOP - 200);
+    physics.add(p);
+    // Every segment, legs and tail included, is still within 3 seconds.
+    const tracker = new SettleTracker(24, 100000, 0.15, 0.008);
+    let settledAt = -1;
+    for (let i = 0; i < 180 && settledAt < 0; i++) {
+      physics.step();
+      const motions = p.bodies.map((b) => {
+        const v = b.getLinearVelocity();
+        // 30 px per metre (PX in physics.ts).
+        return { speed: (Math.hypot(v.x, v.y) * 30) / 60, angularSpeed: Math.abs(b.getAngularVelocity()) / 60 };
+      });
+      if (tracker.update(motions)) settledAt = i;
+    }
+    expect(settledAt).toBeGreaterThan(0);
+    // Frozen, it is an ordinary rigid piece again (normal damping).
+    physics.freeze(p);
+    expect(p.bodies[0].getAngularDamping()).toBeLessThan(1);
   });
 
   it('a frozen soft piece keeps its shape even with weight on it', () => {
