@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUMMY_ROWS, topRows } from './ranking';
+import { DUMMY_ROWS, beatsRecord, topRows } from './ranking';
 import { isValidName } from './names';
 
 describe('rankings with dummies', () => {
@@ -39,5 +39,25 @@ describe('rankings with dummies', () => {
     const d = DUMMY_ROWS[0];
     const rows = topRows([{ uid: 'r', name: 'ほんと', count: d.count, height: d.height }], 'count');
     expect(rows[0].uid).toBe('r');
+  });
+  it('breaks ties by the other number of the same game, not the other best', () => {
+    const real = [
+      // a: best height 9m comes from another game; its 8-piece game was only 3m tall.
+      { uid: 'a', name: 'あ', count: 8, countHeight: 3, height: 9, heightCount: 5 },
+      { uid: 'b', name: 'い', count: 8, countHeight: 4, height: 4, heightCount: 8 },
+    ];
+    expect(topRows(real, 'count').slice(0, 2).map((r) => r.uid)).toEqual(['b', 'a']);
+  });
+  it('a record is beaten by a higher number, or the same with a better partner', () => {
+    const me = { uid: 'm', name: 'わ', count: 8, countHeight: 4, height: 6, heightCount: 7 };
+    expect(beatsRecord({ count: 9, height: 1 }, me, 'count')).toBe(true);
+    expect(beatsRecord({ count: 8, height: 4.01 }, me, 'count')).toBe(true);
+    expect(beatsRecord({ count: 8, height: 4 }, me, 'count')).toBe(false);
+    expect(beatsRecord({ count: 7, height: 9 }, me, 'count')).toBe(false);
+    expect(beatsRecord({ count: 8, height: 6 }, me, 'height')).toBe(true);
+    expect(beatsRecord({ count: 7, height: 6 }, me, 'height')).toBe(false);
+    expect(beatsRecord({ count: 1, height: 0.5 }, null, 'height')).toBe(true);
+    // An older entry without the set: the same count with any height fills it in.
+    expect(beatsRecord({ count: 8, height: 0.1 }, { uid: 'o', name: 'お', count: 8, height: 6 }, 'count')).toBe(true);
   });
 });

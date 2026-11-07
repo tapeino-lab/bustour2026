@@ -162,6 +162,26 @@ describe('scores', () => {
     await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.25), countAt: serverTimestamp(), heightAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('member1'), 'scores/member1'), { ...score('やまな', 2, 1.2), countAt: new Date(0) }));
   });
+  it('keeps each record as a set and lets it get better only', async () => {
+    const ref = doc(as('member2'), 'scores/member2');
+    const now = serverTimestamp();
+    // member2 starts at 5 pieces / 2.5m (no sets yet).
+    await assertSucceeds(setDoc(ref, { count: 6, countHeight: 2.0, countAt: now, updatedAt: now }, { merge: true }));
+    // Same count, taller tower: a better count record (new time); a shorter one is not.
+    await assertSucceeds(setDoc(ref, { countHeight: 2.4, countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { countHeight: 2.1, countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    // The partner cannot change without the time, nor the time without a better record.
+    await assertFails(setDoc(ref, { countHeight: 3.0, updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    // Height record: same height with more pieces is better.
+    await assertSucceeds(setDoc(ref, { heightCount: 4, heightAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { heightCount: 3, heightAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref, { heightCount: 2.5, heightAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    // A lower count is never accepted, whatever its partner.
+    await assertFails(setDoc(ref, { count: 5, countHeight: 9, countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+    // Renaming leaves both sets alone.
+    await assertSucceeds(setDoc(ref, { name: 'ばすた', updatedAt: serverTimestamp() }, { merge: true }));
+  });
   it('rankings are readable by members only', async () => {
     const top = (uid: string) => getDocs(query(collection(as(uid), 'scores'), orderBy('height', 'desc'), limit(20)));
     await assertSucceeds(top('member1'));

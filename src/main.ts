@@ -9,7 +9,7 @@ import { loadBest, loadBestHeight, loadName, saveBest, saveBestHeight, saveName 
 import {
   KANA_COLUMNS, NAME_LENGTH, isValidName, toggleDakuten, toggleHandakuten, toggleSmall, typeKana,
 } from './names';
-import { topRows, type RankingRow } from './ranking';
+import { beatsRecord, topRows, type RankingRow } from './ranking';
 import { formatHeight } from './logic';
 import { decodeTower, towerBodies, towerBreaker } from './tower';
 import { drawTowerImage } from './render';
@@ -417,18 +417,20 @@ async function updateRanking(score: number, height: number, tower: string): Prom
   if (!online) return;
   try {
     // Nothing to register for a game where no piece was stacked.
-    const improved = score > 0 && (!myEntry || score > myEntry.count || height > myEntry.height);
-    if (improved) {
+    const game = { count: score, height };
+    const countUp = score > 0 && beatsRecord(game, myEntry, 'count');
+    const heightUp = score > 0 && beatsRecord(game, myEntry, 'height');
+    if (countUp || heightUp) {
       const name = myEntry?.name ?? (loadName() || (await askName('')));
       if (name) {
-        const countUp = score > (myEntry?.count ?? 0);
-        const heightUp = height > (myEntry?.height ?? 0);
+        // Each record keeps the numbers and the tower of the game that set it.
         await saveEntry({
           name,
-          count: Math.max(score, myEntry?.count ?? 0),
-          height: Math.max(height, myEntry?.height ?? 0),
-          // Each record keeps the tower of the game that set it.
+          count: countUp ? score : myEntry!.count,
+          countHeight: countUp ? height : myEntry?.countHeight,
           towerCount: countUp ? tower : myEntry?.towerCount,
+          height: heightUp ? height : myEntry!.height,
+          heightCount: heightUp ? score : myEntry?.heightCount,
           towerHeight: heightUp ? tower : myEntry?.towerHeight,
         }, { count: countUp, height: heightUp });
       }
@@ -541,13 +543,8 @@ $('rename').addEventListener('click', async () => {
   const name = await askName(myEntry.name);
   if (!name || name === myEntry.name) return;
   try {
-    await saveEntry({
-      name,
-      count: myEntry.count,
-      height: myEntry.height,
-      towerCount: myEntry.towerCount,
-      towerHeight: myEntry.towerHeight,
-    });
+    // Only the name changes; the records (and their sets) stay as they are.
+    await saveEntry({ ...myEntry, name });
   } catch {
     return;
   }

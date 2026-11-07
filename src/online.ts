@@ -19,11 +19,19 @@ export function firebaseOptions(env: Record<string, string | undefined>): Fireba
   return o.apiKey && o.authDomain && o.projectId && o.appId ? (o as FirebaseOptions) : null;
 }
 
+/**
+ * A player's two records, each kept as the set of numbers from the game that made it:
+ * the count record is `count` with `countHeight` (that game's height), the height record is
+ * `height` with `heightCount` (that game's count). Entries saved before the sets existed lack
+ * countHeight / heightCount.
+ */
 export interface ScoreEntry {
   uid: string;
   name: string;
   count: number;
   height: number;
+  countHeight?: number;
+  heightCount?: number;
   /** Tower snapshots (tower.ts) of the games that set the count / height records. */
   towerCount?: string;
   towerHeight?: string;
@@ -47,6 +55,8 @@ function toEntry(uid: string, data: Record<string, unknown>): ScoreEntry {
     name: data.name as string,
     count: data.count as number,
     height: data.height as number,
+    countHeight: data.countHeight as number | undefined,
+    heightCount: data.heightCount as number | undefined,
     towerCount: data.towerCount as string | undefined,
     towerHeight: data.towerHeight as string | undefined,
     countAt: millis(data.countAt) ?? updated,
@@ -154,8 +164,15 @@ export class Online {
     const data: Record<string, unknown> = { name: entry.name, count: entry.count, height: entry.height };
     if (entry.towerCount) data.towerCount = entry.towerCount;
     if (entry.towerHeight) data.towerHeight = entry.towerHeight;
-    if (records.count) data.countAt = serverTimestamp();
-    if (records.height) data.heightAt = serverTimestamp();
+    // A record's partner number and time change only together with the record.
+    if (records.count) {
+      data.countHeight = entry.countHeight;
+      data.countAt = serverTimestamp();
+    }
+    if (records.height) {
+      data.heightCount = entry.heightCount;
+      data.heightAt = serverTimestamp();
+    }
     await setDoc(doc(this.db, 'scores', this.uid), { ...data, updatedAt: serverTimestamp() }, { merge: true });
   }
 

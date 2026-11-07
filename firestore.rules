@@ -8,9 +8,12 @@ rules_version = '2';
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
 //   faces/{pieceId}  { image, visible, updatedAt }  photo (JPEG, or PNG for cut-outs); members see it only while visible
 //   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
-//   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight?, countAt?, heightAt? }
-//                    personal bests for the rankings (+ tower snapshots and when each record was set),
-//                    members only
+//   scores/{uid}     { name, count, countHeight?, towerCount?, countAt?,
+//                      height, heightCount?, towerHeight?, heightAt?, updatedAt }
+//                    a player's two records for the rankings, members only. Each record is kept as
+//                    the set from the game that made it: the count record (count + that game's
+//                    height + its tower + when) and the height record (height + that game's count
+//                    + its tower + when). Older entries lack the partner numbers.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -28,7 +31,10 @@ service cloud.firestore {
     }
     function validScore(d) {
       return d.keys().hasAll(['name', 'count', 'height', 'updatedAt'])
-        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt', 'towerCount', 'towerHeight', 'countAt', 'heightAt'])
+        && d.keys().hasOnly(['name', 'count', 'height', 'updatedAt', 'towerCount', 'towerHeight', 'countAt', 'heightAt',
+                             'countHeight', 'heightCount'])
+        && (!('countHeight' in d) || (d.countHeight is number && d.countHeight >= 0 && d.countHeight <= 1000))
+        && (!('heightCount' in d) || (d.heightCount is int && d.heightCount >= 0 && d.heightCount <= 1000))
         && validTower(d, 'towerCount')
         && validTower(d, 'towerHeight')
         && d.name is string
@@ -41,12 +47,19 @@ service cloud.firestore {
     function newRecordTime(key) {
       return !(key in request.resource.data) || request.resource.data[key] == request.time;
     }
-    function recordTime(key, valueKey) {
+    // A record (valueKey, with partnerKey from the same game and its time timeKey) may only get
+    // better: a higher value, or the same value with a higher partner. Then its time is now;
+    // otherwise the partner and the time stay as they were.
+    function recordUpdate(valueKey, partnerKey, timeKey) {
       let d = request.resource.data;
       let old = resource.data;
-      return d[valueKey] > old[valueKey]
-        ? (key in d && d[key] == request.time)
-        : (key in old ? (key in d && d[key] == old[key]) : !(key in d));
+      let newPartner = d.get(partnerKey, -1);
+      let oldPartner = old.get(partnerKey, -1);
+      let better = d[valueKey] > old[valueKey] || (d[valueKey] == old[valueKey] && newPartner > oldPartner);
+      return d[valueKey] >= old[valueKey]
+        && (better
+          ? d.get(timeKey, null) == request.time
+          : newPartner == oldPartner && d.get(timeKey, null) == old.get(timeKey, null));
     }
 
     // The join code itself is never readable by any client.
@@ -74,15 +87,14 @@ service cloud.firestore {
       allow list, update, delete: if false;
     }
 
-    // Rankings: one doc per device (its uid). Bests may only go up; the name may change.
+    // Rankings: one doc per device (its uid). Records may only get better; the name may change.
     match /scores/{uid} {
       allow read: if isMember() || isAdmin();
       allow create: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
         && newRecordTime('countAt') && newRecordTime('heightAt');
       allow update: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
-        && request.resource.data.count >= resource.data.count
-        && request.resource.data.height >= resource.data.height
-        && recordTime('countAt', 'count') && recordTime('heightAt', 'height');
+        && recordUpdate('count', 'countHeight', 'countAt')
+        && recordUpdate('height', 'heightCount', 'heightAt');
       // Only admins may delete (ranking reset from the admin page).
       allow delete: if isAdmin();
     }
