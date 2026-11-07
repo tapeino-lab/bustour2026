@@ -191,6 +191,8 @@ button {
 .ranking { width: min(380px, 96%); padding: 8px 8px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
 .columns { display: flex; gap: 6px; }
 .columns > div { flex: 1; min-width: 0; }
+/* こすう is at most two digits, so its column only takes what it needs and たかさ gets the rest. */
+.columns > div:last-child { flex: none; }
 .columns h4 { margin: 0 0 4px; font-size: 15px; font-weight: 400; text-align: center; }
 .columns ol { list-style: none; margin: 0; padding: 0; text-align: left; font-size: 13px; }
 .columns li {
@@ -199,7 +201,9 @@ button {
 }
 .columns li.me { background: #fff4b8; }
 .columns li.dummy { color: #a0a0a0; }
-.columns .rank { width: 1.4em; text-align: right; }
+.columns .rank { text-align: right; margin-right: 4px; }
+#rv-count li { grid-template-columns: 1.2em 44px 30px 30px; }
+#rv-count .val { font-size: 15px; letter-spacing: 0; }
 .columns .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: clamp(13px, 4vw, 15px); letter-spacing: -1px; }
 .columns .val { text-align: right; font-size: 12px; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .columns .val small { margin-left: 1px; font-size: 10px; }
