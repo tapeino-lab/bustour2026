@@ -13,9 +13,10 @@ describe('pieceIdForIndex', () => {
     expect(ids.size).toBe(ANIMALS.length);
     expect(pieceIdForIndex(9, () => 0.9999999)).toBe(ANIMALS[ANIMALS.length - 1].id);
   });
-  it('never repeats the previous animal', () => {
+  it('never repeats the previous animal, counting colour variants as the same animal', () => {
+    const kind = (id: string) => ANIMALS.find((a) => a.id === id)!.kind ?? id;
     for (const prev of ANIMALS) {
-      for (let k = 0; k < 20; k++) expect(pieceIdForIndex(5, () => k / 20, prev.id)).not.toBe(prev.id);
+      for (let k = 0; k < 20; k++) expect(kind(pieceIdForIndex(5, () => k / 20, prev.id))).not.toBe(kind(prev.id));
     }
   });
 });

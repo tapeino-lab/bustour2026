@@ -220,7 +220,20 @@ button {
 
 .namepad { width: min(360px, 96%); padding: 10px 10px 12px !important; }
 .name-hint { margin: 2px 0 8px; font-size: 17px; }
-.name-boxes { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.name-row { position: relative; display: flex; justify-content: center; margin-bottom: 10px; }
+.name-boxes { display: flex; gap: 8px; justify-content: center; }
+.name-del {
+  position: absolute;
+  right: 0;
+  top: 8px;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #ffe0e0;
+  font-size: 14px;
+  line-height: 1;
+}
+.name-del:active { background: var(--yellow); }
 .name-boxes span {
   width: 48px;
   height: 48px;
@@ -254,7 +267,7 @@ button {
 }
 .kana-keys button:active, .kana-tools button:active { background: var(--yellow); }
 .kana-keys .blank { visibility: hidden; }
-.kana-tools { display: grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap: 3px; margin-top: 4px; }
+.kana-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px; }
 .kana-tools .del { background: #ffe0e0; font-size: 14px; }
 
 .result-panel { display: flex; flex-direction: column; align-items: center; gap: 2px; }

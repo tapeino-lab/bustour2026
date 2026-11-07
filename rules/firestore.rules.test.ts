@@ -90,12 +90,13 @@ describe('admins', () => {
 
 describe('scores', () => {
   const score = (name: string, count: number, height: number) => ({ name, count, height, updatedAt: serverTimestamp() });
-  it('members can create their own entry with a 3-letter hiragana name', async () => {
+  it('members can create their own entry with a 1-3 letter hiragana name', async () => {
     await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), score('やまな', 3, 1.2)));
     await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), score('ばすー', 3, 1.2)));
+    await assertSucceeds(setDoc(doc(as('member1'), 'scores/member1'), score('や', 3, 1.2)));
   });
   it('rejects bad names', async () => {
-    for (const name of ['やま', 'やまなし', 'ヤマナ', 'abc', 'や ま', '']) {
+    for (const name of ['やまなし', 'ヤマナ', 'abc', 'や ま', '']) {
       await assertFails(setDoc(doc(as('member1'), 'scores/member1'), score(name, 3, 1.2)));
     }
   });

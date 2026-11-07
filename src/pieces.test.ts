@@ -17,9 +17,9 @@ function isConvex(pts: [number, number][]): boolean {
 }
 
 describe('pieces', () => {
-  it('has 14 distinct animals and plants and a bus', () => {
-    expect(ANIMALS).toHaveLength(14);
-    expect(new Set(ALL_PIECES.map((p) => p.id)).size).toBe(15);
+  it('has 17 distinct animals and plants (3 cats, 2 sloths) and a bus', () => {
+    expect(ANIMALS).toHaveLength(17);
+    expect(new Set(ALL_PIECES.map((p) => p.id)).size).toBe(18);
     expect(BUS.id).toBe('bus');
   });
 

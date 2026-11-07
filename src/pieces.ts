@@ -34,6 +34,8 @@ export interface SoftJoint {
 export interface PieceDef {
   id: string;
   name: string;
+  /** Variants of the same animal share a kind (they never come one after another). */
+  kind?: string;
   parts: Shape[];
   details?: Shape[];
   face?: FaceSpot;
@@ -72,20 +74,6 @@ function capsule(color: string, x1: number, y1: number, x2: number, y2: number, 
   return { kind: 'poly', points: pts, color };
 }
 
-/** Petal lines radiating from a flower's centre (drawn only). */
-function petalLines(r1: number, r2: number, n: number, color: string): Shape[] {
-  return Array.from({ length: n }, (_, i) => {
-    const a = (Math.PI * 2 * (i + 0.5)) / n;
-    const d = 0.05;
-    return poly(
-      color,
-      [r1 * Math.cos(a), r1 * Math.sin(a)],
-      [r2 * Math.cos(a - d), r2 * Math.sin(a - d)],
-      [r2 * Math.cos(a + d), r2 * Math.sin(a + d)],
-    );
-  });
-}
-
 /** Light fuzz dots along a foxtail head from (x1, y1) to (x2, y2) (drawn only). */
 function fuzz(x1: number, y1: number, x2: number, y2: number): Shape[] {
   const len = Math.hypot(x2 - x1, y2 - y1);
@@ -105,18 +93,79 @@ function toes(x: number, y: number, color: string, seg = 0): Shape[] {
   return [-3.5, 0, 3.5].map((dx) => ({ kind: 'circle' as const, x: x + dx, y, r: 2.4, color, seg }));
 }
 
-export const ANIMALS: PieceDef[] = [
-  {
-    id: 'cat', name: 'ねこ',
+/** A cat in a given coat; `pattern` is drawn on the body. */
+function catDef(id: string, name: string, fur: string, pattern: Shape[], ears = fur): PieceDef {
+  return {
+    id, name, kind: 'cat',
     parts: [
-      rect(6, 12, 56, 30, '#f0a35e', 12),
-      circle(-24, -12, 19, '#f0a35e'),
-      poly('#f0a35e', [-42, -18], [-38, -42], [-27, -29]),
-      poly('#f0a35e', [-21, -31], [-10, -42], [-6, -18]),
-      rect(37, -6, 8, 30, '#f0a35e', 4),
+      rect(6, 12, 56, 30, fur, 12),
+      circle(-24, -12, 19, fur),
+      poly(ears, [-42, -18], [-38, -42], [-27, -29]),
+      poly(ears, [-21, -31], [-10, -42], [-6, -18]),
+      rect(37, -6, 8, 30, fur, 4),
     ],
+    details: pattern,
     face: { x: -24, y: -12, r: 15 },
-  },
+  };
+}
+
+/**
+ * A sloth seen from the side, hanging from a branch (not drawn): body below, arms and legs
+ * reaching up, head hanging at the front.
+ */
+function slothDef(id: string, name: string, fur: string, dark: string, mask: string): PieceDef {
+  return {
+    id, name, kind: 'sloth',
+    parts: [
+      limb(dark, 22, 4, 34, -42, 10),
+      limb(dark, -10, 2, -4, -42, 10),
+      capsule(fur, -18, 12, 30, 8, 30),
+      limb(fur, 28, 2, 18, -42, 11),
+      limb(fur, -16, 4, -24, -42, 11),
+      circle(-34, 18, 16, mask),
+    ],
+    details: [
+      ...[-29, -25, -21].map((x) => rect(x, -46, 2.5, 8, '#3b2f22', 1)),
+      ...[15, 19, 23].map((x) => rect(x, -46, 2.5, 8, '#3b2f22', 1)),
+      rect(4, 22, 34, 4, dark, 2),
+    ],
+    face: { x: -34, y: 18, r: 13 },
+  };
+}
+
+/** Pointed petals around the centre: `n` petals from radius r1 to r2, `w` wide, two tones. */
+function petals(n: number, r1: number, r2: number, w: number, light: string, deep: string): Shape[] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (Math.PI * 2 * i) / n;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const at = (along: number, across: number): [number, number] => [along * c - across * s, along * s + across * c];
+    const mid = (r1 + r2) / 2;
+    return poly(i % 2 ? deep : light, at(r1, 0), at(r1 + 4, w / 2), at(mid + 4, w / 2), at(r2, 0), at(mid + 4, -w / 2), at(r1 + 4, -w / 2));
+  });
+}
+
+/** The cross-hatched seed pattern on a sunflower centre of radius r (drawn only). */
+function seedGrid(r: number, color: string): Shape[] {
+  const out: Shape[] = [];
+  for (const d of [-12, -6, 0, 6, 12]) {
+    const half = Math.sqrt(r * r - d * d) - 2;
+    out.push(rect(d, 0, 1.6, half * 2, color), rect(0, d, half * 2, 1.6, color));
+  }
+  return out;
+}
+
+export const ANIMALS: PieceDef[] = [
+  catDef('cat', 'ちゃとら', '#f0a35e', [
+    rect(-2, 6, 6, 22, '#c97a34', 3), rect(10, 6, 6, 22, '#c97a34', 3), rect(22, 6, 6, 22, '#c97a34', 3),
+    rect(37, -2, 8, 4, '#c97a34', 2), rect(37, 8, 8, 4, '#c97a34', 2),
+  ]),
+  catDef('cowcat', 'しろくろねこ', '#f7f7f2', [
+    poly('#1f1f24', [-8, 0], [12, -2], [16, 12], [0, 18], [-10, 12]),
+    poly('#1f1f24', [22, 8], [32, 4], [34, 20], [24, 24]),
+    rect(37, -12, 8, 14, '#1f1f24', 4),
+  ], '#1f1f24'),
+  catDef('blackcat', 'くろねこ', '#2b2b33', [rect(6, 20, 40, 6, '#3d3d48', 3)]),
   {
     id: 'dolphin', name: 'いるか',
     parts: [
@@ -157,23 +206,8 @@ export const ANIMALS: PieceDef[] = [
     ],
     face: { x: -38, y: -6, r: 14 },
   },
-  {
-    // Hanging from a branch (not drawn): all four limbs stretched up.
-    id: 'sloth', name: 'なまけもの',
-    parts: [
-      limb('#86704f', -8, 24, -18, -44, 9),
-      limb('#86704f', 8, 24, 18, -44, 9),
-      limb('#9c8466', -14, -2, -34, -46, 10),
-      limb('#9c8466', 14, -2, 34, -46, 10),
-      circle(0, 14, 21, '#9c8466'),
-      circle(0, -14, 16, '#b49a7a'),
-    ],
-    details: [
-      ...[-38, -34, -30].map((x) => rect(x, -50, 2.5, 8, '#3b2f22', 1)),
-      ...[30, 34, 38].map((x) => rect(x, -50, 2.5, 8, '#3b2f22', 1)),
-    ],
-    face: { x: 0, y: -14, r: 13 },
-  },
+  slothDef('sloth', 'なまけもの（ちゃいろ）', '#9c8466', '#7c664b', '#c9b48f'),
+  slothDef('graysloth', 'なまけもの（はいいろ）', '#9a9a8c', '#76766a', '#d0cfc0'),
   {
     // Soft: head, body and tail are joined by springy welds, so it sags a little like the real thing.
     id: 'axolotl', name: 'うーぱーるーぱー',
@@ -206,19 +240,19 @@ export const ANIMALS: PieceDef[] = [
     face: { x: 0, y: -24, r: 11 },
   },
   {
-    // A clump of grass with foxtails (ねこじゃらし), the weed everyone knows.
+    // Foxtails (ねこじゃらし) growing from a little tuft that holds the face.
     id: 'weed', name: 'ざっそう',
     parts: [
-      limb('#7a9a2e', -6, 14, -16, -40, 4),
-      limb('#7a9a2e', 6, 14, 14, -46, 4),
+      limb('#7a9a2e', -6, 8, -16, -40, 4),
+      limb('#7a9a2e', 0, 6, 2, -48, 4),
+      limb('#7a9a2e', 6, 8, 16, -40, 4),
       capsule('#b9c94a', -16, -38, -26, -68, 13),
-      capsule('#b9c94a', 13, -44, 20, -76, 13),
-      poly('#4f8f2e', [-28, 16], [-42, -16], [-18, 16]),
-      poly('#4f8f2e', [20, 16], [42, -12], [32, 16]),
-      rect(0, 22, 64, 26, '#5f9136', 12),
+      capsule('#b9c94a', 2, -46, 3, -78, 13),
+      capsule('#b9c94a', 16, -38, 26, -68, 13),
+      circle(0, 18, 16, '#6aa33a'),
     ],
-    details: [...fuzz(-16, -38, -26, -68), ...fuzz(13, -44, 20, -76)],
-    face: { x: 0, y: 22, r: 12 },
+    details: [...fuzz(-16, -38, -26, -68), ...fuzz(2, -46, 3, -78), ...fuzz(16, -38, 26, -68)],
+    face: { x: 0, y: 18, r: 13 },
   },
   {
     id: 'flyingfox', name: 'おおこうもり',
@@ -248,14 +282,20 @@ export const ANIMALS: PieceDef[] = [
   {
     id: 'squirrel', name: 'りす',
     parts: [
-      circle(-4, 10, 18, '#b5743d'),
-      circle(-14, -16, 14, '#b5743d'),
-      poly('#b5743d', [-23, -25], [-23, -39], [-14, -30]),
-      circle(21, -6, 18, '#c98a50'),
-      rect(17, 14, 14, 16, '#c98a50', 6),
+      circle(24, -10, 19, '#c98a50'),
+      circle(30, -30, 12, '#c98a50'),
+      circle(-2, 14, 16, '#b5743d'),
+      circle(-14, -10, 17, '#b5743d'),
+      circle(-26, -27, 6, '#b5743d'),
+      circle(-4, -29, 6, '#b5743d'),
+      rect(-12, 28, 10, 8, '#8f5a2c', 4), rect(8, 28, 10, 8, '#8f5a2c', 4),
     ],
-    details: [rect(-4, 16, 14, 14, '#ecd2b0', 6)],
-    face: { x: -14, y: -16, r: 11 },
+    details: [
+      circle(-26, -27, 3, '#f2c9a0'), circle(-4, -29, 3, '#f2c9a0'),
+      rect(-2, 18, 14, 16, '#f0d8b4', 7),
+      rect(26, -14, 4, 20, '#e0a870', 2),
+    ],
+    face: { x: -14, y: -10, r: 13 },
   },
   {
     id: 'capybara', name: 'かぴばら',
@@ -268,11 +308,11 @@ export const ANIMALS: PieceDef[] = [
     face: { x: -40, y: -8, r: 13 },
   },
   {
-    // Just the flower.
+    // Petals all round a brown centre, like a picture-book sunflower.
     id: 'sunflower', name: 'ひまわり',
-    parts: [circle(0, 0, 30, '#ffd21f')],
-    details: [...petalLines(18, 29, 10, '#e0a800'), circle(0, 0, 19, '#8a5a2a')],
-    face: { x: 0, y: 0, r: 16 },
+    parts: [...petals(14, 17, 36, 12, '#ffd84d', '#f6c12e'), circle(0, 0, 19, '#c98a3a')],
+    details: seedGrid(19, '#7a4a1e'),
+    face: { x: 0, y: 0, r: 13 },
   },
   {
     id: 'leaf', name: 'はっぱ',

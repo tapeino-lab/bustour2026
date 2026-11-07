@@ -20,7 +20,7 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
-    // Ranking entry: a three-letter hiragana name (ー allowed), sane numbers, optional tower snapshots.
+    // Ranking entry: a 1–3 letter hiragana name (ー allowed), sane numbers, optional tower snapshots.
     function validTower(d, key) {
       return !(key in d) || (d[key] is string && d[key].size() < 12000 && d[key].matches('^v1[|].*'));
     }
@@ -30,7 +30,7 @@ service cloud.firestore {
         && validTower(d, 'towerCount')
         && validTower(d, 'towerHeight')
         && d.name is string
-        && d.name.matches('^[ぁ-ゖー]{3}$')
+        && d.name.matches('^[ぁ-ゖー]{1,3}$')
         && d.count is int && d.count >= 0 && d.count <= 1000
         && d.height is number && d.height >= 0 && d.height <= 1000
         && d.updatedAt == request.time;

@@ -151,6 +151,7 @@ let background: HTMLCanvasElement | null = null;
 /** Mt. Fuji on its own transparent layer, so it can scroll as distant scenery. */
 let scenery: HTMLCanvasElement | null = null;
 let sceneryScale = 1;
+const SCENERY_ALPHA = 0.55;
 
 /** Builds the comic sky (gradient, rays, halftone dots) for a canvas of w×h device pixels. */
 export function buildBackground(w: number, h: number, k: number): void {
@@ -282,7 +283,12 @@ function drawBackground(ctx: CanvasRenderingContext2D, shift: number): void {
   if (background) {
     ctx.drawImage(background, 0, 0);
     // The mountain sinks as the tower (and the camera) goes up.
-    if (scenery) ctx.drawImage(scenery, 0, Math.round(shift * sceneryScale));
+    if (scenery) {
+      // Drawn faint so it stays in the background.
+      ctx.globalAlpha = SCENERY_ALPHA;
+      ctx.drawImage(scenery, 0, Math.round(shift * sceneryScale));
+      ctx.globalAlpha = 1;
+    }
   }
   else {
     ctx.fillStyle = '#36b6ec';

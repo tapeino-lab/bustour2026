@@ -4,11 +4,14 @@ export const PX_PER_METER = 50;
 
 /**
  * Which piece comes as the n-th piece (1-based): the bus first (only then), and after that a
- * random animal that is never the same as the previous one (`prevId`).
+ * random animal that is never the same animal as the previous one (`prevId`) — colour variants
+ * of one animal (same `kind`) count as the same.
  */
 export function pieceIdForIndex(n: number, rand: () => number, prevId?: string): string {
   if (n === 1) return BUS.id;
-  const choices = ANIMALS.filter((a) => a.id !== prevId);
+  const kindOf = (id: string | undefined) => ANIMALS.find((a) => a.id === id)?.kind ?? id;
+  const prevKind = kindOf(prevId);
+  const choices = ANIMALS.filter((a) => (a.kind ?? a.id) !== prevKind);
   const i = Math.min(choices.length - 1, Math.floor(rand() * choices.length));
   return choices[i].id;
 }

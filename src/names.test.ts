@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { isValidName, normalizeName } from './names';
 
 describe('ranking names', () => {
-  it('accepts exactly three hiragana letters', () => {
-    expect(isValidName('やまな')).toBe(true);
-    expect(isValidName('ばすー')).toBe(true);
-    for (const n of ['やま', 'やまなし', 'ヤマナ', 'abc', '山なし', '']) expect(isValidName(n)).toBe(false);
+  it('accepts one to three hiragana letters', () => {
+    for (const n of ['やまな', 'ばすー', 'やま', 'や']) expect(isValidName(n)).toBe(true);
+    for (const n of ['やまなし', 'ヤマナ', 'abc', '山なし', '']) expect(isValidName(n)).toBe(false);
   });
   it('turns katakana (also half-width) into hiragana and drops spaces', () => {
     expect(normalizeName(' ヤマナ ')).toBe('やまな');

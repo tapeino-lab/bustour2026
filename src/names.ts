@@ -1,5 +1,5 @@
-/** Ranking names: exactly three hiragana letters (the long-vowel mark ー is allowed). */
-export const NAME_PATTERN = /^[ぁ-ゖー]{3}$/u;
+/** Ranking names: one to three hiragana letters (the long-vowel mark ー is allowed). */
+export const NAME_PATTERN = /^[ぁ-ゖー]{1,3}$/u;
 
 /** Cleans typed input: full/half-width unified, spaces removed, katakana turned into hiragana. */
 export function normalizeName(input: string): string {

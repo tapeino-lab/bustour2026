@@ -268,9 +268,13 @@ function key(label: string, onPress: () => void, className = ''): HTMLButtonElem
     key('゜', () => (typedName = toggleHandakuten(typedName)), 'mark'),
     key('小', () => (typedName = toggleSmall(typedName))),
     key('ー', () => (typedName = typeKana(typedName, 'ー'))),
-    key('けす', () => (typedName = typedName.slice(0, -1)), 'del'),
   );
   keys.after(tools);
+  // けす sits next to the letters, away from けってい.
+  $('name-del').addEventListener('click', () => {
+    typedName = typedName.slice(0, -1);
+    showTypedName();
+  });
 }
 let nameResolve: ((name: string | null) => void) | null = null;
 
