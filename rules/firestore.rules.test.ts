@@ -5,7 +5,7 @@ import {
   assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc,
+  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where,
 } from 'firebase/firestore';
 
 const CODE = 'yamanashi-2026';
@@ -26,7 +26,9 @@ beforeEach(async () => {
     await setDoc(doc(db, 'config/join'), { code: CODE });
     await setDoc(doc(db, 'admins/admin1'), {});
     await setDoc(doc(db, 'members/member1'), { code: CODE, joinedAt: new Date() });
-    await setDoc(doc(db, 'faces/cat'), { image: JPEG, updatedAt: new Date() });
+    await setDoc(doc(db, 'faces/cat'), { image: JPEG, visible: true, updatedAt: new Date() });
+    await setDoc(doc(db, 'faces/dog'), { image: JPEG, visible: false, updatedAt: new Date() });
+    await setDoc(doc(db, 'faces/bird'), { image: JPEG, updatedAt: new Date() });
     await setDoc(doc(db, 'members/member2'), { code: CODE, joinedAt: new Date() });
     await setDoc(doc(db, 'scores/member2'), { name: 'ばすた', count: 5, height: 2.5, updatedAt: new Date() });
   });
@@ -68,7 +70,13 @@ describe('join code', () => {
 describe('faces', () => {
   it('are readable by members and admins only', async () => {
     await assertSucceeds(getDoc(doc(as('member1'), 'faces/cat')));
-    await assertSucceeds(getDocs(collection(as('member1'), 'faces')));
+    // Members must ask only for visible photos; hidden or never-switched-on ones stay unreadable.
+    await assertSucceeds(getDocs(query(collection(as('member1'), 'faces'), where('visible', '==', true))));
+    await assertFails(getDocs(collection(as('member1'), 'faces')));
+    await assertFails(getDoc(doc(as('member1'), 'faces/dog')));
+    await assertFails(getDoc(doc(as('member1'), 'faces/bird')));
+    await assertSucceeds(getDoc(doc(as('admin1'), 'faces/dog')));
+    await assertSucceeds(getDocs(collection(as('admin1'), 'faces')));
     await assertSucceeds(getDoc(doc(as('admin1'), 'faces/cat')));
     await assertFails(getDoc(doc(as('stranger'), 'faces/cat')));
     await assertFails(getDocs(collection(as('stranger'), 'faces')));
@@ -76,6 +84,9 @@ describe('faces', () => {
   });
   it('can be written by admins only, as a JPEG data URL', async () => {
     await assertSucceeds(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, updatedAt: serverTimestamp() }));
+    await assertSucceeds(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, visible: true, updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { image: JPEG, visible: 'yes', updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(as('member1'), 'faces/cat'), { image: JPEG, visible: false, updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('member1'), 'faces/dog'), { image: JPEG, updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { image: 'data:text/html;base64,AAAA', updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('admin1'), 'faces/Dog!'), { image: JPEG, updatedAt: serverTimestamp() }));

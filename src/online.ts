@@ -4,7 +4,7 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
   collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
-  serverTimestamp, setDoc, type Firestore,
+  serverTimestamp, setDoc, where, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 
@@ -82,8 +82,9 @@ export class Online {
   }
 
   /** All face photos as { pieceId: JPEG data URL }. */
+  /** Face photos that are switched on for display (the only ones members may read). */
   async loadFaces(): Promise<Map<string, string>> {
-    const snap = await getDocs(collection(this.db, 'faces'));
+    const snap = await getDocs(query(collection(this.db, 'faces'), where('visible', '==', true)));
     const out = new Map<string, string>();
     snap.forEach((d) => {
       const image = d.get('image');
@@ -92,8 +93,25 @@ export class Online {
     return out;
   }
 
+  /** Every registered photo with its display switch (admins only). */
+  async loadAllFaces(): Promise<Map<string, { image: string; visible: boolean }>> {
+    const snap = await getDocs(collection(this.db, 'faces'));
+    const out = new Map<string, { image: string; visible: boolean }>();
+    snap.forEach((d) => {
+      const image = d.get('image');
+      if (typeof image === 'string') out.set(d.id, { image, visible: d.get('visible') === true });
+    });
+    return out;
+  }
+
+  /** Registers (or replaces) a photo; its display switch is kept as it was (off for a new one). */
   async saveFace(pieceId: string, image: string): Promise<void> {
-    await setDoc(doc(this.db, 'faces', pieceId), { image, updatedAt: serverTimestamp() });
+    await setDoc(doc(this.db, 'faces', pieceId), { image, updatedAt: serverTimestamp() }, { merge: true });
+  }
+
+  /** Turns showing a registered photo on or off. */
+  async setFaceVisible(pieceId: string, visible: boolean): Promise<void> {
+    await setDoc(doc(this.db, 'faces', pieceId), { visible, updatedAt: serverTimestamp() }, { merge: true });
   }
 
   /** This device's ranking entry, or null if it has none yet. */

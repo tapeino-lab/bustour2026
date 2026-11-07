@@ -486,16 +486,36 @@ async function showAdmin(): Promise<void> {
   const list = $('admin-list');
   list.replaceChildren();
   if (admin) {
-    const current = await o.loadFaces();
+    const current = await o.loadAllFaces();
     for (const a of ALL_PIECES) {
       const li = document.createElement('li');
       const pic = document.createElement('img');
       pic.alt = '';
-      const src = current.get(a.id);
-      if (src) pic.src = src;
+      const entry = current.get(a.id);
+      if (entry) pic.src = entry.image;
       else pic.className = 'noface';
       const name = document.createElement('span');
       name.textContent = a.name;
+      // Registering and showing are separate: a photo appears in the game only while this is on.
+      const show = document.createElement('button');
+      show.type = 'button';
+      show.className = 'toggle show';
+      show.textContent = 'ひょうじ';
+      show.setAttribute('aria-pressed', String(entry?.visible ?? false));
+      show.disabled = !entry;
+      show.addEventListener('click', async () => {
+        const on = show.getAttribute('aria-pressed') !== 'true';
+        show.disabled = true;
+        try {
+          await o.setFaceVisible(a.id, on);
+          show.setAttribute('aria-pressed', String(on));
+          if (on) setFaces(new Map([[a.id, pic.src]]));
+          else faces.delete(a.id);
+        } catch {
+          // Leave the switch as it was.
+        }
+        show.disabled = false;
+      });
       const label = document.createElement('label');
       label.textContent = 'しゃしん';
       const input = document.createElement('input');
@@ -510,7 +530,9 @@ async function showAdmin(): Promise<void> {
           await o.saveFace(a.id, jpeg);
           pic.src = jpeg;
           pic.className = '';
-          setFaces(new Map([[a.id, jpeg]]));
+          // Only shown in the game if the display switch is on.
+          if (show.getAttribute('aria-pressed') === 'true') setFaces(new Map([[a.id, jpeg]]));
+          show.disabled = false;
           label.textContent = 'かえる';
         } catch {
           label.textContent = 'しっぱい';
@@ -518,7 +540,7 @@ async function showAdmin(): Promise<void> {
         input.value = '';
       });
       label.appendChild(input);
-      li.append(pic, name, label);
+      li.append(pic, name, show, label);
       list.appendChild(li);
     }
   }

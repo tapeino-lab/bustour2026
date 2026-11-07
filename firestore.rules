@@ -6,7 +6,7 @@ rules_version = '2';
 //   config/join      { code: "<join code>" }   set in the console only; nobody can read it
 //   admins/{uid}     {}                        set in the console only; who can upload faces
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
-//   faces/{pieceId}  { image, updatedAt }      face photo (JPEG data URL), members only
+//   faces/{pieceId}  { image, visible, updatedAt }  face photo (JPEG data URL); members see it only while visible
 //   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
 //   scores/{uid}     { name, count, height, updatedAt, towerCount?, towerHeight? }
 //                    personal bests for the rankings (+ tower snapshots), members only
@@ -86,11 +86,13 @@ service cloud.firestore {
     }
 
     // Face photos: readable by members (and admins), writable by admins only.
+    // Registering and showing are separate: members can read a photo only while `visible` is on.
     match /faces/{pieceId} {
-      allow read: if isMember() || isAdmin();
+      allow read: if isAdmin() || (isMember() && resource.data.visible == true);
       allow create, update: if isAdmin()
         && pieceId.matches('^[a-z]{2,20}$')
-        && request.resource.data.keys().hasOnly(['image', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['image', 'visible', 'updatedAt'])
+        && (!('visible' in request.resource.data) || request.resource.data.visible is bool)
         && request.resource.data.image is string
         && request.resource.data.image.size() < 200000
         && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
