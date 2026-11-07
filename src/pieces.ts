@@ -252,15 +252,19 @@ const RAW_ANIMALS: PieceDef[] = [
   slothDef('sloth', 'なまけもの（ちゃいろ）', '#8a6440', '#5f4227', '#d9b98a'),
   slothDef('graysloth', 'なまけもの（はいいろ）', '#c4c3ba', '#97968c', '#f2f0e6'),
   {
-    // Very soft (ふにゃふにゃ): the head jiggles on a wobbly weld, the tail (base and tip) and the
-    // two legs hang on loose hinges, so it flops down like the real thing and its legs dangle.
+    // Very soft (ふにゃふにゃ): the head sits on a soft weld, the body bends in the middle, the tail
+    // (base and tip) and the two legs hang on loose hinges, so it flops down like the real thing
+    // and its legs dangle.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
       circle(-40, 0, 18, '#f7a8c4', 0),
       polySeg(0, '#e57aa3', [-50, -12], [-64, -24], [-58, -29], [-46, -16]),
       polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
       polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
-      rect(2, 6, 60, 22, '#f7a8c4', 11, 1),
+      // The body in two halves (front: segment 1, back: segment 8) that overlap a little, so the
+      // seam stays hidden when it bends.
+      rect(-11, 6, 34, 22, '#f7a8c4', 11, 1),
+      rect(15, 6, 34, 22, '#f7a8c4', 11, 8),
       // The tail in two pieces (base and tip), so it bends in the middle.
       polySeg(2, '#f7a8c4', [30, -2], [50, 0], [50, 13], [30, 16]),
       polySeg(7, '#f7a8c4', [49, 0], [66, 2], [70, 10], [49, 13]),
@@ -278,19 +282,20 @@ const RAW_ANIMALS: PieceDef[] = [
     ],
     face: { x: -40, y: 0, r: 14, seg: 0 },
     // Only the body has to come to rest: the floppy head, tail and legs do not hold up the game.
-    settleSegments: [1],
+    settleSegments: [1, 8],
     joints: [
-      // A wobbly neck: soft and only lightly damped, so the head jiggles like jelly.
-      { a: 0, b: 1, x: -26, y: 4, hz: 1.2, damping: 0.4 },
-      // The tail swings fairly freely on both joints: a long way down, part of the way up.
-      { a: 1, b: 2, x: 31, y: 6, hinge: [-0.6, 1.2], loose: true },
+      { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
+      // The middle of the body: a soft weld, so it sags and bends but keeps its shape.
+      { a: 1, b: 8, x: 2, y: 6, hz: 4, damping: 1 },
+      // The tail swings freely: from the root a long way down and well up, the tip a bit less.
+      { a: 8, b: 2, x: 31, y: 6, hinge: [-1.3, 1.8], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.6, 1.0], loose: true },
       // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
       // the back leg to the right), so they never tuck in under the body; once landed they turn
       // almost all the way round outwards but only a little inwards, so they mostly splay out.
       { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0], landed: [-2.6, 0.25], loose: true },
       { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0], landed: [-2.6, 0.3], loose: true },
-      { a: 1, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: [-0.25, 2.6], loose: true },
+      { a: 8, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: [-0.25, 2.6], loose: true },
       { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8], landed: [-0.3, 2.6], loose: true },
     ],
   },

@@ -65,16 +65,18 @@ export function decodeTower(s: unknown): TowerPiece[] | null {
 /**
  * Older snapshots of pieces whose segments were later split up: for each old segment count,
  * which old segment each current segment follows. (The axolotl went from 3 to 6 to 5 segments,
- * then 7 when its legs got knees, then 8 when its tail got a joint; a leg or tail recorded in one
- * piece is drawn straight.)
+ * then 7 when its legs got knees, 8 when its tail got a joint and 9 when its body did; a leg, tail
+ * or body recorded in one piece is drawn straight.)
  */
 const LEGACY_SEGMENTS: Record<string, Record<number, number[]>> = {
-  // now: head, body, tail base, front thigh, front shin, back thigh, back shin, tail tip
+  // now: head, front body, tail base, front thigh, front shin, back thigh, back shin, tail tip,
+  // back body
   axolotl: {
-    3: [0, 1, 2, 1, 1, 1, 1, 2], // head, body (with legs), tail
-    5: [0, 1, 2, 3, 3, 4, 4, 2], // head, body, tail, front leg, back leg
-    6: [0, 1, 3, 4, 4, 5, 5, 3], // head, front body, back body, tail, front leg, back leg
-    7: [0, 1, 2, 3, 4, 5, 6, 2], // tail in one piece
+    3: [0, 1, 2, 1, 1, 1, 1, 2, 1], // head, body (with legs), tail
+    5: [0, 1, 2, 3, 3, 4, 4, 2, 1], // head, body, tail, front leg, back leg
+    6: [0, 1, 3, 4, 4, 5, 5, 3, 2], // head, front body, back body, tail, front leg, back leg
+    7: [0, 1, 2, 3, 4, 5, 6, 2, 1], // body and tail each in one piece
+    8: [0, 1, 2, 3, 4, 5, 6, 7, 1], // body in one piece
   },
 };
 

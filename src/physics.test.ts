@@ -105,7 +105,7 @@ describe('physics', () => {
     physics.add(p);
     // Front leg turns left (negative), back leg right (positive) relative to the body.
     const hipFront = () => p.segPose(3).angle - p.segPose(1).angle;
-    const hipBack = () => p.segPose(5).angle - p.segPose(1).angle;
+    const hipBack = () => p.segPose(5).angle - p.segPose(8).angle;
     for (let i = 0; i < 400 && !p.landed; i++) {
       physics.step();
       if (!p.landed) {
@@ -115,7 +115,7 @@ describe('physics', () => {
     }
     expect(p.landed).toBe(true);
     // Once landed the front hip turns far outwards (left) but only a little inwards.
-    const hip = p.joints[3] as RevoluteJoint;
+    const hip = p.joints[def.joints!.findIndex((j) => j.b === 3)] as RevoluteJoint;
     expect(hip.getLowerLimit()).toBeCloseTo(-2.6);
     expect(hip.getUpperLimit()).toBeCloseTo(0.25);
   });

@@ -24,7 +24,7 @@ describe('tower snapshots', () => {
 
   it('keeps each segment of a soft piece', () => {
     const soft = new PieceBody(ALL_PIECES.find((d) => d.id === 'axolotl')!);
-    expect(soft.segments).toBe(8);
+    expect(soft.segments).toBe(9);
     soft.setPose(100, -50, 0);
     soft.setSegPose(2, { x: 104, y: -46, angle: 0.3 });
     const [back] = towerBodies(decodeTower(encodeTower([soft]))!);
@@ -37,13 +37,17 @@ describe('tower snapshots', () => {
     const pose = (x: number, a: number) => `${x},-50,${a}`;
     // 5 segments: head, body, tail, front leg, back leg (before the knees were added).
     const [five] = towerBodies(decodeTower(`v1|axolotl,${[pose(1, 0), pose(2, 0.1), pose(3, 0.2), pose(4, 0.3), pose(5, 0.4)].join(',')}`)!);
-    expect([0, 1, 2, 3, 4, 5, 6, 7].map((i) => five.segPose(i).angle)).toEqual([0, 0.1, 0.2, 0.3, 0.3, 0.4, 0.4, 0.2]);
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => five.segPose(i).angle)).toEqual([0, 0.1, 0.2, 0.3, 0.3, 0.4, 0.4, 0.2, 0.1]);
     // 6 segments: head, front body, back body, tail, front leg, back leg.
     const [six] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2, 3, 4, 5].map((i) => pose(i, i / 10)).join(',')}`)!);
-    expect([0, 1, 2, 3, 4, 5, 6, 7].map((i) => six.segPose(i).angle)).toEqual([0, 0.1, 0.3, 0.4, 0.4, 0.5, 0.5, 0.3]);
-    // 7 segments: the tail in one piece; its tip follows the tail.
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => six.segPose(i).angle)).toEqual([0, 0.1, 0.3, 0.4, 0.4, 0.5, 0.5, 0.3, 0.2]);
+    // 7 segments: body and tail each in one piece; the tail tip follows the tail, the back body the body.
     const [seven] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2, 3, 4, 5, 6].map((i) => pose(i, i / 10)).join(',')}`)!);
-    expect([0, 1, 2, 3, 4, 5, 6, 7].map((i) => seven.segPose(i).angle)).toEqual([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.2]);
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => seven.segPose(i).angle)).toEqual([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.2, 0.1]);
+    // 8 segments: the body in one piece; its back half follows it.
+    const [eight] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => pose(i, i / 10)).join(',')}`)!);
+    expect(eight.segPose(8).angle).toBe(0.1);
+    expect(eight.segPose(7).angle).toBe(0.7);
     // 3 segments: head, body, tail; legs follow the body.
     const [three] = towerBodies(decodeTower(`v1|axolotl,${[0, 1, 2].map((i) => pose(i, i / 10)).join(',')}`)!);
     expect(three.segPose(6).angle).toBe(0.1);
