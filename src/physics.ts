@@ -107,6 +107,10 @@ export interface Pose {
 export class PieceBody {
   /** One body per segment once the piece is in the world. */
   bodies: Body[] = [];
+  /** Welds between segments (soft until the piece is frozen). */
+  joints: WeldJoint[] = [];
+  /** True once a soft piece has been locked into its current shape. */
+  frozen = false;
   readonly segments: number;
   /** Poses while not in the world, per segment. */
   private poses: Pose[];
@@ -135,8 +139,22 @@ export class PieceBody {
     return this.bodies[0] ?? null;
   }
 
+  /** Once frozen: each segment's pose in segment 0's frame (segment 0 carries them all). */
+  private rigid: Pose[] | null = null;
+
+  setRigidOffsets(rel: Pose[]): void {
+    this.rigid = rel;
+  }
+
   /** Current pose of a segment. */
   segPose(i: number): Pose {
+    if (this.rigid && i > 0) {
+      const p = this.segPose(0);
+      const r = this.rigid[i];
+      const c = Math.cos(p.angle);
+      const s = Math.sin(p.angle);
+      return { x: p.x + r.x * c - r.y * s, y: p.y + r.x * s + r.y * c, angle: p.angle + r.angle };
+    }
     const b = this.bodies[i];
     if (!b) return this.poses[i];
     const p = b.getPosition();
@@ -150,6 +168,14 @@ export class PieceBody {
 
   /** Pose of a segment to draw: between the previous and current step by `alpha` (0..1). */
   drawSegPose(i: number, alpha: number): Pose {
+    if (this.rigid && i > 0) {
+      // Frozen: follow segment 0's smoothed pose exactly.
+      const p = this.drawSegPose(0, alpha);
+      const r = this.rigid[i];
+      const c = Math.cos(p.angle);
+      const s = Math.sin(p.angle);
+      return { x: p.x + r.x * c - r.y * s, y: p.y + r.x * s + r.y * c, angle: p.angle + r.angle };
+    }
     const cur = this.segPose(i);
     if (!this.bodies[i]) return cur;
     const t = Math.max(0, Math.min(1, alpha));
@@ -310,9 +336,10 @@ export class Physics {
       }
       bodies.push(body);
     }
+    piece.joints = [];
     for (const j of piece.def.joints ?? []) {
       const anchor = piece.localToWorld(j.x, j.y);
-      this.world.createJoint(
+      const joint = this.world.createJoint(
         new WeldJoint(
           {
             frequencyHz: j.hz ?? SOFT_WELD.frequencyHz,
@@ -324,9 +351,48 @@ export class Physics {
           new Vec2(anchor.x / PX, anchor.y / PX),
         ),
       );
+      if (joint) piece.joints.push(joint);
     }
     piece.bodies = bodies;
     piece.savePrev();
+  }
+
+  /**
+   * Locks a soft piece into the shape it has now: all its segments are merged into one rigid
+   * body (segment 0), keeping each segment's current position and angle relative to it.
+   */
+  freeze(piece: PieceBody): void {
+    if (piece.frozen || piece.bodies.length < 2) return;
+    const main = piece.bodies[0];
+    const p0 = piece.segPose(0);
+    const c0 = Math.cos(p0.angle);
+    const s0 = Math.sin(p0.angle);
+    const rel: Pose[] = [{ x: 0, y: 0, angle: 0 }];
+    for (let i = 1; i < piece.segments; i++) {
+      const q = piece.segPose(i);
+      const dx = q.x - p0.x;
+      const dy = q.y - p0.y;
+      rel.push({ x: dx * c0 + dy * s0, y: -dx * s0 + dy * c0, angle: q.angle - p0.angle });
+    }
+    for (const j of piece.joints) this.world.destroyJoint(j);
+    piece.joints = [];
+    for (let i = 1; i < piece.segments; i++) {
+      const r = rel[i];
+      const c = Math.cos(r.angle);
+      const s = Math.sin(r.angle);
+      const toMain = (x: number, y: number) => new Vec2((r.x + x * c - y * s) / PX, (r.y + x * s + y * c) / PX);
+      for (const part of piece.def.parts.filter((p) => (p.seg ?? 0) === i)) {
+        const shape =
+          part.kind === 'circle' && part.exact
+            ? new Circle(toMain(part.x, part.y), (part.r + PIECE_OUTLINE) / PX)
+            : withSkin(new Polygon(shapeOutline(part).map(([x, y]) => toMain(x, y))), PIECE_OUTLINE);
+        main.createFixture(shape, { density: DENSITY, friction: part.friction ?? FRICTION, restitution: 0 });
+      }
+      this.world.destroyBody(piece.bodies[i]);
+    }
+    piece.bodies = [main];
+    piece.setRigidOffsets(rel);
+    piece.frozen = true;
   }
 
   step(): void {

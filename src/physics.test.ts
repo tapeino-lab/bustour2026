@@ -97,4 +97,23 @@ describe('physics', () => {
     expect(bend).toBeGreaterThan(0.03);
     expect(settledAt).toBeGreaterThan(0);
   });
+
+  it('a frozen soft piece keeps its shape even with weight on it', () => {
+    const physics = new Physics();
+    const def = ALL_PIECES.find((p) => p.id === 'axolotl')!;
+    const p = new PieceBody(def, WORLD_WIDTH / 2, GROUND_TOP - 40);
+    physics.add(p);
+    for (let i = 0; i < 300; i++) physics.step();
+    physics.freeze(p);
+    expect(p.frozen).toBe(true);
+    const rel = () => Array.from({ length: p.segments }, (_, i) => p.segPose(i).angle - p.segPose(1).angle);
+    const before = rel();
+    // Drop something heavy right on it.
+    const bus = new PieceBody(ALL_PIECES.find((d) => d.id === 'bus')!, WORLD_WIDTH / 2, GROUND_TOP - 140);
+    physics.add(bus);
+    for (let i = 0; i < 300; i++) physics.step();
+    rel().forEach((r, i) => expect(Math.abs(r - before[i])).toBeLessThan(0.005));
+    expect(p.bodies).toHaveLength(1);
+  });
 });
+

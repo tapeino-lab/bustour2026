@@ -229,6 +229,8 @@ export class Game {
         this.score = this.pieces.length;
         this.bestHeight = Math.max(this.bestHeight, this.heightM);
         this.lastTower = encodeTower(this.pieces);
+        // Soft pieces stay soft only while they are the one being dropped: lock them now.
+        for (const p of this.pieces) this.physics.freeze(p);
         this.spawn();
       }
     }
