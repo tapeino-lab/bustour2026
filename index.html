@@ -41,20 +41,8 @@
           <p class="best">じこベスト <span id="over-best">0</span>こ　<span id="over-best-height">0.0</span>m</p>
           <p class="newbest hidden" id="new-best">じこベスト こうしん！</p>
         </div>
-        <div id="ranking" class="panel ranking hidden">
-          <div class="columns">
-            <div>
-              <h4>たかさ</h4>
-              <ol id="ranking-height"></ol>
-            </div>
-            <div>
-              <h4>こすう</h4>
-              <ol id="ranking-count"></ol>
-            </div>
-          </div>
-          <button id="rename" class="comic-btn sub rename hidden">なまえを かえる</button>
-        </div>
-        <button id="retry" class="comic-btn">もういちど</button>
+        <button id="retry" class="comic-btn retry">もういちど</button>
+        <button id="to-ranking" class="comic-btn retry hidden">つぎへ</button>
         <button id="open-join" class="comic-btn sub hidden">さんかコードを いれる</button>
       </section>
       <section id="join" class="overlay hidden">
@@ -82,8 +70,10 @@
               <ol id="rv-count"></ol>
             </div>
           </div>
-          <button id="ranking-close" class="comic-btn sub rename">とじる</button>
+          <button id="rename" class="comic-btn sub rename hidden">なまえを かえる</button>
         </div>
+        <button id="rv-retry" class="comic-btn retry hidden">もういちど</button>
+        <button id="ranking-close" class="comic-btn sub">とじる</button>
       </section>
       <section id="tower" class="overlay hidden">
         <div class="panel viewer">

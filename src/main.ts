@@ -208,8 +208,11 @@ game.onGameOver = (score, height, tower) => {
   $('over-best').parentElement!.classList.toggle('hidden', isNew);
   sound.stopMusic();
   sound.play(isNew && score > 0 ? 'best' : 'over');
-  $('ranking').classList.add('hidden');
-  if (online && member) void updateRanking(score, height, tower);
+  // Members see only the score first, then "つぎへ" leads to the ranking (with もういちど there).
+  const ranked = !!online && member;
+  rankingSaved = ranked ? updateRanking(score, height, tower) : Promise.resolve();
+  $('retry').classList.toggle('hidden', ranked);
+  $('to-ranking').classList.toggle('hidden', !ranked);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
   $('open-join').classList.toggle('hidden', !online || member);
@@ -217,6 +220,20 @@ game.onGameOver = (score, height, tower) => {
 };
 
 $('retry').addEventListener('click', startGame);
+$('rv-retry').addEventListener('click', () => {
+  showOverlay(rankingViewEl, false);
+  startGame();
+});
+$('to-ranking').addEventListener('click', async () => {
+  await rankingSaved;
+  if (await openRankingView(true)) {
+    overEl.classList.add('hidden');
+  } else {
+    // The ranking could not be loaded (offline?): stay on the score with もういちど.
+    $('to-ranking').classList.add('hidden');
+    $('retry').classList.remove('hidden');
+  }
+});
 
 // ---- Updates: look for a new version regularly, apply it only at a natural moment ----------
 const UPDATE_CHECK_MS = 60_000;
@@ -237,7 +254,8 @@ function maybeApplyUpdate(returning = false): void {
   if (!pendingUpdate) return;
   // Coming back to the app with only the result screen up (no name entry etc.) is also fine.
   const open = [...document.querySelectorAll('.overlay')].filter((el) => !el.classList.contains('hidden'));
-  const resultsShown = returning && game.state === 'over' && open.length === 1 && open[0] === overEl;
+  const resultsShown =
+    returning && game.state === 'over' && open.length === 1 && (open[0] === overEl || open[0] === rankingViewEl);
   if (atFreshStart() || resultsShown) reloadToVersion(pendingUpdate);
 }
 
@@ -304,6 +322,9 @@ async function becomeMember(): Promise<void> {
 
 // ---- Rankings (members only) ------------------------------------------------------------------
 let myEntry: ScoreEntry | null = null;
+/** Saving this game's record (and asking for a name); the ranking is shown once it is done. */
+let rankingSaved: Promise<void> = Promise.resolve();
+const rankingViewEl = $('ranking-view');
 const nameEl = $('name');
 // Names are typed on an on-screen 50-sound keyboard, so only hiragana (max three) can be entered.
 let typedName = '';
@@ -384,7 +405,7 @@ async function saveEntry(entry: Omit<ScoreEntry, 'uid'>): Promise<void> {
   saveName(entry.name);
 }
 
-/** After a game: register a new personal best (asking for a name the first time), then show the ranking. */
+/** After a game: register a new personal best (asking for a name the first time). */
 async function updateRanking(score: number, height: number, tower: string): Promise<void> {
   if (!online) return;
   try {
@@ -406,9 +427,8 @@ async function updateRanking(score: number, height: number, tower: string): Prom
       }
     }
   } catch {
-    // Saving failed (offline?): still show the ranking below.
+    // Saving failed (offline?): the ranking is still shown afterwards.
   }
-  await showRanking();
 }
 
 /** Opens the tower viewer for a snapshot string; does nothing if it cannot be read. */
@@ -478,18 +498,22 @@ async function loadRankingInto(heightList: HTMLElement, countList: HTMLElement):
   }
 }
 
-/** Rankings on the game-over screen. */
-async function showRanking(): Promise<void> {
-  if (!(await loadRankingInto($('ranking-height'), $('ranking-count')))) return;
+/**
+ * The ranking screen, shared by the trophy button and the end of a game. After a game it offers
+ * もういちど instead of とじる. The rename button shows whenever the player is on the ranking.
+ */
+async function openRankingView(afterGame: boolean): Promise<boolean> {
+  if (!(await loadRankingInto($('rv-height'), $('rv-count')))) return false;
   $('rename').classList.toggle('hidden', !myEntry);
-  $('ranking').classList.remove('hidden');
+  $('rv-retry').classList.toggle('hidden', !afterGame);
+  $('ranking-close').classList.toggle('hidden', afterGame);
+  showOverlay(rankingViewEl, true);
+  return true;
 }
 
 // Trophy button (top left): the rankings at any time.
-$('ranking-open').addEventListener('click', async () => {
-  if (await loadRankingInto($('rv-height'), $('rv-count'))) showOverlay($('ranking-view'), true);
-});
-$('ranking-close').addEventListener('click', () => showOverlay($('ranking-view'), false));
+$('ranking-open').addEventListener('click', () => void openRankingView(false));
+$('ranking-close').addEventListener('click', () => showOverlay(rankingViewEl, false));
 
 $('rename').addEventListener('click', async () => {
   if (!myEntry) return;
@@ -506,7 +530,7 @@ $('rename').addEventListener('click', async () => {
   } catch {
     return;
   }
-  await showRanking();
+  await loadRankingInto($('rv-height'), $('rv-count'));
 });
 
 $('join-ok').addEventListener('click', async () => {
