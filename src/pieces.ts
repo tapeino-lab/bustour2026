@@ -297,11 +297,11 @@ const RAW_ANIMALS: PieceDef[] = [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
       // The middle of the body: a soft weld, so it sags and bends but keeps its shape.
       { a: 1, b: 8, x: 2, y: 6, hz: 4, damping: 1 },
-      // The tail hangs limp: both joints swing freely, the root a long way down (up to about
-      // 155°) and the tip less (about 57°), but at most about 20° (root) / 34° (tip) up, so it
-      // flops down by itself and goes up only when something pushes it from below. It passes through the legs (see noCollide), so the back
+      // The tail hangs limp: both joints swing freely. The root turns 45° down and 45° up (90°
+      // in all); the tip up to about 57° down and 34° up. It flops down by itself and goes up
+      // only when something pushes it from below. It passes through the legs (see noCollide), so the back
       // legs do not hold it up.
-      { a: 8, b: 2, x: 31, y: 6, hinge: [-0.35, 2.7], loose: true },
+      { a: 8, b: 2, x: 31, y: 6, hinge: [-0.785, 0.785], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.6, 1.0], loose: true },
       // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
       // the back leg to the right), so they never tuck in under the body; once landed they turn
