@@ -3,7 +3,7 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
-  collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
+  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
   serverTimestamp, setDoc, Timestamp, where, writeBatch, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
@@ -38,6 +38,8 @@ export interface ScoreEntry {
   /** When the count / height record was set (ms); breaks ties after the other value. */
   countAt?: number;
   heightAt?: number;
+  /** When the entry was last saved (ms). */
+  updatedAt?: number;
 }
 
 /** Which records a save sets (their time is stamped by the server). */
@@ -61,6 +63,7 @@ function toEntry(uid: string, data: Record<string, unknown>): ScoreEntry {
     towerHeight: data.towerHeight as string | undefined,
     countAt: millis(data.countAt) ?? updated,
     heightAt: millis(data.heightAt) ?? updated,
+    updatedAt: updated,
   };
 }
 
@@ -197,6 +200,17 @@ export class Online {
 
   async saveBgm(audio: string): Promise<void> {
     await setDoc(doc(this.db, 'media', 'bgm'), { audio, updatedAt: serverTimestamp() });
+  }
+
+  /** Every ranking entry (admins only, for the admin page). */
+  async allScores(): Promise<ScoreEntry[]> {
+    const snap = await getDocs(collection(this.db, 'scores'));
+    return snap.docs.map((d) => toEntry(d.id, d.data()));
+  }
+
+  /** Deletes one ranking entry (admins only), e.g. an old one left in another browser. */
+  async deleteScore(uid: string): Promise<void> {
+    await deleteDoc(doc(this.db, 'scores', uid));
   }
 
   /** Deletes every ranking entry (admins only). Returns how many were removed. */

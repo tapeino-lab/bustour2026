@@ -331,6 +331,14 @@ button {
   transform: rotate(-35deg);
 }
 .toggle[aria-pressed='true'] { background: var(--yellow); color: var(--ink); }
+.admin-scores { margin: 6px 0; font-size: 13px; }
+.admin-scores .small { margin: 4px 0; }
+#admin-scores-list { list-style: none; margin: 4px 0; padding: 0; max-height: 34vh; overflow-y: auto; text-align: left; }
+#admin-scores-list li { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 2px solid #eee; }
+#admin-scores-list li.dup { background: #fff4b8; }
+#admin-scores-list .who { font-size: 15px; min-width: 3.4em; }
+#admin-scores-list .rec { font-size: 11px; line-height: 1.4; }
+#admin-scores-list button { margin-left: auto; flex: none; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: #ffe0e0; font: inherit; font-size: 12px; }
 .admin-bgm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
 .admin-bgm input { display: none; }
 .rename { margin-top: 8px; padding: 7px 16px; font-size: 13px; align-self: center; }

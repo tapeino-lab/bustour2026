@@ -657,6 +657,8 @@ async function showAdmin(): Promise<void> {
     }
   }
   if (admin) {
+    $('admin-scores').classList.remove('hidden');
+    $('admin-scores-btn').onclick = () => void showAdminScores(o);
     $('admin-reset').classList.remove('hidden');
     $('admin-reset-btn').onclick = async () => {
       if (!window.confirm('ランキングを ぜんぶ けしますか？（もとに もどせません）')) return;
@@ -700,6 +702,63 @@ async function showAdmin(): Promise<void> {
   }
   showOverlay(adminEl, true);
 }
+/**
+ * Admin page: every ranking entry with a delete button, sorted by name (then newest first) so a
+ * player who played in two browsers shows up as two rows next to each other (marked).
+ */
+async function showAdminScores(o: Online): Promise<void> {
+  const status = $('admin-scores-status');
+  const list = $('admin-scores-list');
+  status.textContent = 'よみこみちゅう…';
+  let entries: ScoreEntry[];
+  try {
+    entries = await o.allScores();
+  } catch (e) {
+    status.textContent = `しっぱい（${(e as { code?: string }).code ?? String(e)}）`;
+    return;
+  }
+  status.textContent = `${entries.length}けん`;
+  entries.sort((a, b) => a.name.localeCompare(b.name, 'ja') || (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+  const names = new Map<string, number>();
+  for (const e of entries) names.set(e.name, (names.get(e.name) ?? 0) + 1);
+  const date = (ms?: number) => {
+    if (!ms) return '—';
+    const d = new Date(ms);
+    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  list.replaceChildren();
+  for (const e of entries) {
+    const li = document.createElement('li');
+    if ((names.get(e.name) ?? 0) > 1) li.classList.add('dup');
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = e.name;
+    const rec = document.createElement('span');
+    rec.className = 'rec';
+    const mine = e.uid === o.uid ? '　この たんまつ' : '';
+    rec.textContent = `${e.count}こ ${formatHeight(e.height)}m${mine}\nほぞん ${date(e.updatedAt)}`;
+    rec.style.whiteSpace = 'pre-line';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = 'けす';
+    del.addEventListener('click', async () => {
+      const when = date(e.updatedAt);
+      if (!window.confirm(`「${e.name}」の きろく（${e.count}こ ${formatHeight(e.height)}m、${when}）を けしますか？（もとに もどせません）`)) return;
+      del.disabled = true;
+      try {
+        await o.deleteScore(e.uid);
+        if (e.uid === o.uid) myEntry = null;
+        await showAdminScores(o);
+      } catch (err) {
+        del.disabled = false;
+        status.textContent = `しっぱい（${(err as { code?: string }).code ?? String(err)}）`;
+      }
+    });
+    li.append(who, rec, del);
+    list.appendChild(li);
+  }
+}
+
 $('admin-close').addEventListener('click', () => showOverlay($('admin'), false));
 
 async function initOnline(): Promise<void> {
