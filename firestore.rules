@@ -6,7 +6,8 @@ rules_version = '2';
 //   config/join      { code: "<join code>" }   set in the console only; nobody can read it
 //   admins/{uid}     {}                        set in the console only; who can upload faces
 //   members/{uid}    { code, joinedAt }        created by a device that entered the right code
-//   faces/{pieceId}  { image, visible, updatedAt }  photo (JPEG, or PNG for cut-outs); members see it only while visible
+//   faces/{pieceId}  { image, visible, enhance?, updatedAt }  photo (JPEG, or PNG for cut-outs); members see it
+//                    only while visible. enhance: how strongly it is evened out ('strong', 'soft', 'none')
 //   media/bgm        { audio, updatedAt }      background music (audio data URL), members only
 //   scores/{uid}     { name, count, countHeight?, towerCount?, countAt?,
 //                      height, heightCount?, towerHeight?, heightAt?, updatedAt }
@@ -118,8 +119,9 @@ service cloud.firestore {
       allow read: if isAdmin() || (isMember() && resource.data.visible == true);
       allow create, update: if isAdmin()
         && pieceId.matches('^[a-z]{2,20}$')
-        && request.resource.data.keys().hasOnly(['image', 'visible', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['image', 'visible', 'enhance', 'updatedAt'])
         && (!('visible' in request.resource.data) || request.resource.data.visible is bool)
+        && (!('enhance' in request.resource.data) || request.resource.data.enhance in ['strong', 'soft', 'none'])
         && request.resource.data.image is string
         && request.resource.data.image.size() < 200000
         && request.resource.data.image.matches('^data:image/(jpeg|png);base64,[A-Za-z0-9+/=]+$')

@@ -54,4 +54,17 @@ describe('enhanceFace', () => {
     enhanceFace(d, 10, 10);
     expect(d[3]).toBe(7);
   });
+  it('does nothing at strength 0 and about half as much at 0.5', () => {
+    const none = photo(40, 50, 20, 3);
+    const copy = new Uint8ClampedArray(none);
+    enhanceFace(none, 40, 40, 0);
+    expect(none).toEqual(copy);
+    const soft = photo(40, 50, 20, 3);
+    const strong = photo(40, 50, 20, 3);
+    enhanceFace(soft, 40, 40, 0.5);
+    enhanceFace(strong, 40, 40, 1);
+    const [m0, m1, m2] = [centreMean(copy, 40), centreMean(soft, 40), centreMean(strong, 40)];
+    expect(m1).toBeGreaterThan(m0);
+    expect(m1).toBeLessThan(m2);
+  });
 });

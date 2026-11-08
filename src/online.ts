@@ -4,9 +4,14 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
   collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
-  serverTimestamp, setDoc, Timestamp, where, writeBatch, type Firestore,
+  serverTimestamp, setDoc, Timestamp, where, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
+import { DEFAULT_ENHANCE, ENHANCE_LEVELS, type Enhance, type FacePhoto } from './faces';
+
+function enhanceOf(v: unknown): Enhance {
+  return ENHANCE_LEVELS.includes(v as Enhance) ? (v as Enhance) : DEFAULT_ENHANCE;
+}
 
 /** Firebase settings come from build-time environment variables (GitHub Secrets), never the repo. */
 export function firebaseOptions(env: Record<string, string | undefined>): FirebaseOptions | null {
@@ -121,25 +126,32 @@ export class Online {
 
   /** All face photos as { pieceId: JPEG data URL }. */
   /** Face photos that are switched on for display (the only ones members may read). */
-  async loadFaces(): Promise<Map<string, string>> {
+  async loadFaces(): Promise<Map<string, FacePhoto>> {
     const snap = await getDocs(query(collection(this.db, 'faces'), where('visible', '==', true)));
-    const out = new Map<string, string>();
+    const out = new Map<string, FacePhoto>();
     snap.forEach((d) => {
       const image = d.get('image');
-      if (typeof image === 'string') out.set(d.id, image);
+      if (typeof image === 'string') out.set(d.id, { image, enhance: enhanceOf(d.get('enhance')) });
     });
     return out;
   }
 
   /** Every registered photo with its display switch (admins only). */
-  async loadAllFaces(): Promise<Map<string, { image: string; visible: boolean }>> {
+  async loadAllFaces(): Promise<Map<string, FacePhoto & { visible: boolean }>> {
     const snap = await getDocs(collection(this.db, 'faces'));
-    const out = new Map<string, { image: string; visible: boolean }>();
+    const out = new Map<string, FacePhoto & { visible: boolean }>();
     snap.forEach((d) => {
       const image = d.get('image');
-      if (typeof image === 'string') out.set(d.id, { image, visible: d.get('visible') === true });
+      if (typeof image === 'string') {
+        out.set(d.id, { image, visible: d.get('visible') === true, enhance: enhanceOf(d.get('enhance')) });
+      }
     });
     return out;
+  }
+
+  /** Sets how strongly a photo is evened out in the game. */
+  async setFaceEnhance(pieceId: string, enhance: Enhance): Promise<void> {
+    await setDoc(doc(this.db, 'faces', pieceId), { enhance, updatedAt: serverTimestamp() }, { merge: true });
   }
 
   /** Registers (or replaces) a photo; its display switch is kept as it was (off for a new one). */
@@ -211,17 +223,5 @@ export class Online {
   /** Deletes one ranking entry (admins only), e.g. an old one left in another browser. */
   async deleteScore(uid: string): Promise<void> {
     await deleteDoc(doc(this.db, 'scores', uid));
-  }
-
-  /** Deletes every ranking entry (admins only). Returns how many were removed. */
-  async resetRanking(): Promise<number> {
-    const snap = await getDocs(collection(this.db, 'scores'));
-    // Small batches keep each request well under Firestore's per-request rule limits.
-    for (let i = 0; i < snap.docs.length; i += 10) {
-      const batch = writeBatch(this.db);
-      for (const d of snap.docs.slice(i, i + 10)) batch.delete(d.ref);
-      await batch.commit();
-    }
-    return snap.size;
   }
 }

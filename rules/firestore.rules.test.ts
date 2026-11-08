@@ -97,6 +97,13 @@ describe('faces', () => {
     await assertSucceeds(deleteDoc(doc(as('admin1'), 'faces/cat')));
     await assertFails(deleteDoc(doc(as('member1'), 'faces/cat')));
   });
+  it('keeps how strongly each photo is evened out (admins only, known levels)', async () => {
+    for (const enhance of ['strong', 'soft', 'none']) {
+      await assertSucceeds(setDoc(doc(as('admin1'), 'faces/dog'), { enhance, updatedAt: serverTimestamp() }, { merge: true }));
+    }
+    await assertFails(setDoc(doc(as('admin1'), 'faces/dog'), { enhance: 'max', updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(doc(as('member1'), 'faces/cat'), { enhance: 'soft', updatedAt: serverTimestamp() }, { merge: true }));
+  });
 });
 
 describe('admins', () => {

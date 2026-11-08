@@ -328,6 +328,8 @@ export class PieceBody {
 const SOFT_WELD = { frequencyHz: 3.5, dampingRatio: 1 };
 /** Friction torque in hinges (N·m): enough to stop dangling, too little to hold up the body. */
 const HINGE_FRICTION = 0.15;
+/** How fast (rad/s) a drooping joint tries to turn downwards; its torque is capped by `droop`. */
+const DROOP_SPEED = 4;
 
 export class Physics {
   readonly world: World;
@@ -394,9 +396,9 @@ export class Physics {
               enableLimit: true,
               lowerAngle: j.hinge[0],
               upperAngle: j.hinge[1],
-              enableMotor: !j.loose,
-              motorSpeed: 0,
-              maxMotorTorque: j.loose ? 0 : HINGE_FRICTION,
+              enableMotor: !j.loose || !!j.droop,
+              motorSpeed: j.droop ? DROOP_SPEED : 0,
+              maxMotorTorque: j.droop ?? (j.loose ? 0 : HINGE_FRICTION),
               collideConnected: false,
             },
             bodies[j.a],

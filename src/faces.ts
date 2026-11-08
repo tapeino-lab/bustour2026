@@ -11,11 +11,24 @@ export const faces: FaceImages = new Map();
 /** Pieces drawn as a cut-out photo (like しげみ): shown as uploaded, not enhanced. */
 const SPRITE_IDS = new Set(ALL_PIECES.filter((p) => p.sprite).map((p) => p.id));
 
-export function setFaces(images: Map<string, string>): void {
-  for (const [id, src] of images) {
+/** How strongly a face photo is evened out, chosen per photo on the admin page. */
+export type Enhance = 'none' | 'soft' | 'strong';
+export const ENHANCE_LEVELS: Enhance[] = ['strong', 'soft', 'none'];
+export const ENHANCE_LABELS: Record<Enhance, string> = { strong: 'つよめ', soft: 'よわめ', none: 'なし' };
+/** Photos saved before the choice existed get the strong setting (what they had). */
+export const DEFAULT_ENHANCE: Enhance = 'strong';
+const ENHANCE_STRENGTH: Record<Enhance, number> = { strong: 1, soft: 0.5, none: 0 };
+
+export interface FacePhoto {
+  image: string;
+  enhance?: Enhance;
+}
+
+export function setFaces(photos: Map<string, FacePhoto>): void {
+  for (const [id, photo] of photos) {
     const img = new Image();
-    img.onload = () => faces.set(id, SPRITE_IDS.has(id) ? img : enhancedFace(img));
-    img.src = src;
+    img.onload = () => faces.set(id, SPRITE_IDS.has(id) ? img : enhancedFace(img, photo.enhance ?? DEFAULT_ENHANCE));
+    img.src = photo.image;
   }
 }
 
@@ -32,8 +45,10 @@ const COLOUR_BALANCE = 0.6;
  * middle (what the game shows), the darkest and brightest parts are stretched to full contrast,
  * the overall brightness is pulled to the same target for every photo, colours are boosted a
  * little and edges are sharpened, so dim or blurry photos look alike and crisp when small.
+ * `strength` (0–1) blends between the photo as it is and the full effect.
  */
-export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void {
+export function enhanceFace(data: Uint8ClampedArray, w: number, h: number, strength = 1): void {
+  if (strength <= 0) return;
   const n = w * h;
   const lum = new Float32Array(n);
   for (let i = 0; i < n; i++) lum[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
@@ -65,7 +80,8 @@ export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void
     for (let v = 0; v < 256; v++) {
       const own = (v - clo) / (chi - clo);
       const shared = (v - lo) / (hi - lo);
-      t[v] = Math.min(1, Math.max(0, COLOUR_BALANCE * own + (1 - COLOUR_BALANCE) * shared));
+      const stretched = Math.min(1, Math.max(0, COLOUR_BALANCE * own + (1 - COLOUR_BALANCE) * shared));
+      t[v] = strength * stretched + (1 - strength) * (v / 255);
     }
     return t;
   });
@@ -75,7 +91,9 @@ export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void
     mean += 0.299 * levels[0][data[i * 4]] + 0.587 * levels[1][data[i * 4 + 1]] + 0.114 * levels[2][data[i * 4 + 2]];
   }
   mean = circle.length ? mean / circle.length : 0.5;
-  const gamma = Math.min(2.2, Math.max(0.45, Math.log(TARGET_BRIGHTNESS) / Math.log(Math.min(0.97, Math.max(0.03, mean)))));
+  const gamma = Math.min(2.2, Math.max(0.45, Math.log(TARGET_BRIGHTNESS) / Math.log(Math.min(0.97, Math.max(0.03, mean))))) ** strength;
+  const saturation = 1 + (SATURATION - 1) * strength;
+  const sharpen = SHARPEN * strength;
   const luts = levels.map((t) => t.map((v) => 255 * v ** gamma));
 
   // Levels + brightness, then colour boost around each pixel's own grey.
@@ -85,9 +103,9 @@ export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void
     const g = luts[1][data[i * 4 + 1]];
     const b = luts[2][data[i * 4 + 2]];
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
-    out[i * 3] = y + (r - y) * SATURATION;
-    out[i * 3 + 1] = y + (g - y) * SATURATION;
-    out[i * 3 + 2] = y + (b - y) * SATURATION;
+    out[i * 3] = y + (r - y) * saturation;
+    out[i * 3 + 1] = y + (g - y) * saturation;
+    out[i * 3 + 2] = y + (b - y) * saturation;
   }
 
   // Sharpen (unsharp mask with a 5×5 box blur): edges stay clear when the photo is shown small.
@@ -107,21 +125,21 @@ export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void
           }
         }
         const v = out[(y * w + x) * 3 + c];
-        data[(y * w + x) * 4 + c] = v + (v - sum / count) * SHARPEN;
+        data[(y * w + x) * 4 + c] = v + (v - sum / count) * sharpen;
       }
     }
   }
 }
 
 /** An enhanced copy of a face photo, ready to draw. */
-export function enhancedFace(img: HTMLImageElement): HTMLCanvasElement {
+export function enhancedFace(img: HTMLImageElement, level: Enhance = DEFAULT_ENHANCE): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
   const g = c.getContext('2d', { willReadFrequently: true })!;
   g.drawImage(img, 0, 0);
   const px = g.getImageData(0, 0, c.width, c.height);
-  enhanceFace(px.data, c.width, c.height);
+  enhanceFace(px.data, c.width, c.height, ENHANCE_STRENGTH[level]);
   g.putImageData(px, 0, 0);
   return c;
 }

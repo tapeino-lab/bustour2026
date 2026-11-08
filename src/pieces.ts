@@ -43,6 +43,11 @@ export interface SoftJoint {
   hinge?: [number, number];
   /** A hinge that swings freely (no friction), like a dangling tail. */
   loose?: boolean;
+  /**
+   * A gentle pull of segment b towards larger angles (downwards for a tail pointing right), as
+   * a maximum torque: it droops by itself and goes up only when something pushes it.
+   */
+  droop?: number;
   /** Hinge range once the piece has touched something (until then `hinge` applies); 'free' = no limit. */
   landed?: [number, number] | 'free';
 }
@@ -68,6 +73,9 @@ export interface PieceDef {
    */
   sprite?: { x: number; y: number; w: number; h: number };
 }
+
+/** Torque of the axolotl tail's downward pull (see SoftJoint.droop). */
+const DROOP = 0.2;
 
 const rect = (x: number, y: number, w: number, h: number, color: string, round = 0, seg = 0): Shape => ({
   kind: 'rect', x, y, w, h, color, round, seg,
@@ -290,8 +298,10 @@ const RAW_ANIMALS: PieceDef[] = [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
       // The middle of the body: a soft weld, so it sags and bends but keeps its shape.
       { a: 1, b: 8, x: 2, y: 6, hz: 4, damping: 1 },
-      // The tail swings freely: from the root a long way down and well up, the tip a bit less.
-      { a: 8, b: 2, x: 31, y: 6, hinge: [-1.3, 1.8], loose: true },
+      // The tail hangs limp: its root is pulled gently downwards (positive angles), so it flops
+      // down by itself, and goes up (at most about 20°) only when something pushes it from
+      // below. The tip just dangles (pulling it down too would lever the root up).
+      { a: 8, b: 2, x: 31, y: 6, hinge: [-0.35, 1.8], loose: true, droop: DROOP },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.6, 1.0], loose: true },
       // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
       // the back leg to the right), so they never tuck in under the body; once landed they turn

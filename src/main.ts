@@ -1,5 +1,8 @@
 import './style.css';
-import { enhancedFace, faces, fileToFaceJpeg, fileToSpritePng, setFaces } from './faces';
+import {
+  DEFAULT_ENHANCE, ENHANCE_LABELS, ENHANCE_LEVELS, enhancedFace, faces, fileToFaceJpeg, fileToSpritePng, setFaces,
+  type Enhance,
+} from './faces';
 import type { NewRecords, Online, RankingKind, ScoreEntry } from './online';
 import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
@@ -608,9 +611,11 @@ async function showAdmin(): Promise<void> {
       // Next to the uploaded photo: how the game shows it (evened out; cut-outs stay as they are).
       const after = document.createElement('canvas');
       after.className = 'after hidden';
+      let enablePick = () => {};
+      let enhance: Enhance = entry?.enhance ?? DEFAULT_ENHANCE;
       const showAfter = () => {
         if (a.sprite || !pic.src) return;
-        const e = enhancedFace(pic);
+        const e = enhancedFace(pic, enhance);
         after.width = e.width;
         after.height = e.height;
         after.getContext('2d')!.drawImage(e, 0, 0);
@@ -618,7 +623,41 @@ async function showAdmin(): Promise<void> {
       };
       pic.addEventListener('load', showAfter);
       const name = document.createElement('span');
+      name.className = 'face-name';
       name.textContent = a.name;
+      // Name on top, the controls (かこう, ひょうじ, しゃしん) under it.
+      const controls = document.createElement('span');
+      controls.className = 'face-controls';
+      // How strongly the photo is evened out (some faces get too red with the strong setting).
+      if (!a.sprite) {
+        const pick = document.createElement('select');
+        pick.className = 'enhance';
+        for (const level of ENHANCE_LEVELS) {
+          const opt = document.createElement('option');
+          opt.value = level;
+          opt.textContent = `かこう：${ENHANCE_LABELS[level]}`;
+          pick.appendChild(opt);
+        }
+        pick.value = enhance;
+        pick.disabled = !entry;
+        pick.addEventListener('change', async () => {
+          const before = enhance;
+          enhance = pick.value as Enhance;
+          showAfter();
+          pick.disabled = true;
+          try {
+            await o.setFaceEnhance(a.id, enhance);
+            if (show.getAttribute('aria-pressed') === 'true') setFaces(new Map([[a.id, { image: pic.src, enhance }]]));
+          } catch {
+            enhance = before;
+            pick.value = before;
+            showAfter();
+          }
+          pick.disabled = false;
+        });
+        controls.appendChild(pick);
+        enablePick = () => (pick.disabled = false);
+      }
       // Registering and showing are separate: a photo appears in the game only while this is on.
       const show = document.createElement('button');
       show.type = 'button';
@@ -632,7 +671,7 @@ async function showAdmin(): Promise<void> {
         try {
           await o.setFaceVisible(a.id, on);
           show.setAttribute('aria-pressed', String(on));
-          if (on) setFaces(new Map([[a.id, pic.src]]));
+          if (on) setFaces(new Map([[a.id, { image: pic.src, enhance }]]));
           else faces.delete(a.id);
         } catch {
           // Leave the switch as it was.
@@ -655,8 +694,9 @@ async function showAdmin(): Promise<void> {
           pic.src = jpeg;
           pic.className = '';
           // Only shown in the game if the display switch is on.
-          if (show.getAttribute('aria-pressed') === 'true') setFaces(new Map([[a.id, jpeg]]));
+          if (show.getAttribute('aria-pressed') === 'true') setFaces(new Map([[a.id, { image: jpeg, enhance }]]));
           show.disabled = false;
+          enablePick();
           label.textContent = 'かえる';
         } catch {
           label.textContent = 'しっぱい';
@@ -667,28 +707,17 @@ async function showAdmin(): Promise<void> {
       const photos = document.createElement('span');
       photos.className = 'photos';
       photos.append(pic, after);
-      li.append(photos, name, show, label);
+      controls.append(show, label);
+      const body = document.createElement('span');
+      body.className = 'face-body';
+      body.append(name, controls);
+      li.append(photos, body);
       list.appendChild(li);
     }
   }
   if (admin) {
     $('admin-scores').classList.remove('hidden');
     $('admin-scores-btn').onclick = () => void showAdminScores(o);
-    $('admin-reset').classList.remove('hidden');
-    $('admin-reset-btn').onclick = async () => {
-      if (!window.confirm('ランキングを ぜんぶ けしますか？（もとに もどせません）')) return;
-      const status = $('admin-reset-status');
-      status.textContent = 'けしています…';
-      try {
-        const n = await o.resetRanking();
-        myEntry = null;
-        status.textContent = `${n}けん けしました`;
-      } catch (e) {
-        // Show why (e.g. permission-denied when the console still has older rules).
-        const code = (e as { code?: string }).code ?? String(e);
-        status.textContent = `しっぱい（${code}）`;
-      }
-    };
     $('admin-bgm').classList.remove('hidden');
     const fileInput = $<HTMLInputElement>('admin-bgm-file');
     fileInput.onchange = async () => {
