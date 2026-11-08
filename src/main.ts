@@ -145,15 +145,24 @@ canvas.addEventListener('pointerdown', (e) => {
   game.pointerDown(toLogicalX(e));
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (e.pointerId === dragPointer) game.pointerMove(toLogicalX(e));
+  if (e.pointerId !== dragPointer) return;
+  game.pointerMove(toLogicalX(e));
+  showCancel(isOverRotate(e));
 });
 function isOverRotate(e: PointerEvent): boolean {
   const r = rotateBtn.getBoundingClientRect();
   return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
 }
+/** While a swipe is over the rotate button, it lights up and reads キャンセル (letting go there cancels). */
+function showCancel(on: boolean): void {
+  if (rotateBtn.classList.contains('cancel') === on) return;
+  rotateBtn.classList.toggle('cancel', on);
+  $('rotate-label').textContent = on ? 'キャンセル' : 'かいてん';
+}
 function endDrag(e: PointerEvent): void {
   if (e.pointerId !== dragPointer) return;
   dragPointer = null;
+  showCancel(false);
   // Releasing over the rotate button cancels the drop.
   if (e.type === 'pointercancel' || isOverRotate(e)) game.cancelDrag();
   else game.pointerUp();

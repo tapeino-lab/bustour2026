@@ -100,6 +100,17 @@ button {
   line-height: 1;
 }
 #rotate svg { width: 30px; height: 30px; flex: none; }
+/* A swipe over the button: letting go there cancels the drop, so it glows and says キャンセル. */
+#rotate.cancel {
+  background: #fff7c2;
+  box-shadow: 5px 5px 0 var(--ink), 0 0 0 4px #fff, 0 0 22px 10px #ffe14a;
+  animation: cancel-glow 0.7s ease-in-out infinite alternate;
+}
+#rotate.cancel svg { display: none; }
+@keyframes cancel-glow {
+  from { box-shadow: 5px 5px 0 var(--ink), 0 0 0 4px #fff, 0 0 12px 4px #ffe14a; }
+  to { box-shadow: 5px 5px 0 var(--ink), 0 0 0 4px #fff, 0 0 26px 14px #ffd000; }
+}
 
 .overlay {
   position: absolute;

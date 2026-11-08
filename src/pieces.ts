@@ -280,11 +280,11 @@ const RAW_ANIMALS: PieceDef[] = [
       // knees give way outwards and the legs splay open. Slippery feet help them slide out.
       { ...limb('#f7a8c4', -20, 15, -28, 26, 8), seg: 3 },
       { ...limb('#f7a8c4', -28, 26, -40, 34, 7), seg: 4, friction: 0.2 },
-      { ...limb('#f7a8c4', 24, 15, 32, 26, 8), seg: 5 },
-      { ...limb('#f7a8c4', 32, 26, 44, 34, 7), seg: 6, friction: 0.2 },
+      { ...limb('#f7a8c4', 16, 15, 24, 26, 8), seg: 5 },
+      { ...limb('#f7a8c4', 24, 26, 36, 34, 7), seg: 6, friction: 0.2 },
     ],
     details: [
-      ...toes(-42, 36, '#e57aa3', 4), ...toes(46, 36, '#e57aa3', 6),
+      ...toes(-42, 36, '#e57aa3', 4), ...toes(38, 36, '#e57aa3', 6),
       polySeg(2, '#fbd0df', [36, 0], [50, 1.5], [50, 4.5], [36, 4]),
       polySeg(7, '#fbd0df', [50, 1.5], [64, 3], [64, 6], [50, 4.5]),
     ],
@@ -308,8 +308,8 @@ const RAW_ANIMALS: PieceDef[] = [
       // almost all the way round outwards but only a little inwards, so they mostly splay out.
       { a: 1, b: 3, x: -20, y: 16, hinge: [-0.5, 0], landed: [-2.6, 0.25], loose: true },
       { a: 3, b: 4, x: -28, y: 26, hinge: [-0.8, 0], landed: [-2.6, 0.3], loose: true },
-      { a: 8, b: 5, x: 24, y: 16, hinge: [0, 0.5], landed: [-0.25, 2.6], loose: true },
-      { a: 5, b: 6, x: 32, y: 26, hinge: [0, 0.8], landed: [-0.3, 2.6], loose: true },
+      { a: 8, b: 5, x: 16, y: 16, hinge: [0, 0.5], landed: [-0.25, 2.6], loose: true },
+      { a: 5, b: 6, x: 24, y: 26, hinge: [0, 0.8], landed: [-0.3, 2.6], loose: true },
     ],
   },
   {
