@@ -43,11 +43,6 @@ export interface SoftJoint {
   hinge?: [number, number];
   /** A hinge that swings freely (no friction), like a dangling tail. */
   loose?: boolean;
-  /**
-   * A gentle pull of segment b towards larger angles (downwards for a tail pointing right), as
-   * a maximum torque: it droops by itself and goes up only when something pushes it.
-   */
-  droop?: number;
   /** Hinge range once the piece has touched something (until then `hinge` applies); 'free' = no limit. */
   landed?: [number, number] | 'free';
 }
@@ -67,15 +62,17 @@ export interface PieceDef {
    */
   settleSegments?: number[];
   /**
+   * Groups of segments that pass through each other (they still collide with everything else),
+   * e.g. a dangling tail and the legs below it.
+   */
+  noCollide?: number[][];
+  /**
    * A photo drawn instead of the parts, in this local box. The photo itself is not in the
    * repository: it is uploaded on the admin page (stored like face photos, members only).
    * Without it the parts are shown as a plain silhouette.
    */
   sprite?: { x: number; y: number; w: number; h: number };
 }
-
-/** Torque of the axolotl tail's downward pull (see SoftJoint.droop). */
-const DROOP = 0.2;
 
 const rect = (x: number, y: number, w: number, h: number, color: string, round = 0, seg = 0): Shape => ({
   kind: 'rect', x, y, w, h, color, round, seg,
@@ -294,15 +291,17 @@ const RAW_ANIMALS: PieceDef[] = [
     face: { x: -40, y: 0, r: 14, seg: 0 },
     // Only the body has to come to rest: the floppy head, tail and legs do not hold up the game.
     settleSegments: [1, 8],
+    // The tail hangs down past the back legs instead of resting on them.
+    noCollide: [[2, 7, 3, 4, 5, 6]],
     joints: [
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
       // The middle of the body: a soft weld, so it sags and bends but keeps its shape.
       { a: 1, b: 8, x: 2, y: 6, hz: 4, damping: 1 },
-      // The tail hangs limp: its root is pulled gently downwards (positive angles), so it flops
-      // down by itself (up to about 155° down), and goes up (at most about 20°) only when
-      // something pushes it from below. The tip just dangles (pulling it down too would lever
-      // the root up).
-      { a: 8, b: 2, x: 31, y: 6, hinge: [-0.35, 2.7], loose: true, droop: DROOP },
+      // The tail hangs limp: both joints swing freely, a long way down (root up to about 155°,
+      // tip about 92°) but at most about 20° up, so it flops down by itself and goes up only when
+      // something pushes it from below. It passes through the legs (see noCollide), so the back
+      // legs do not hold it up.
+      { a: 8, b: 2, x: 31, y: 6, hinge: [-0.35, 2.7], loose: true },
       { a: 2, b: 7, x: 50, y: 6, hinge: [-0.6, 1.6], loose: true },
       // Legs dangle from the hip. While falling they only bend outwards (the front leg to the left,
       // the back leg to the right), so they never tuck in under the body; once landed they turn

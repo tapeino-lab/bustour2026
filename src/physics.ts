@@ -328,8 +328,6 @@ export class PieceBody {
 const SOFT_WELD = { frequencyHz: 3.5, dampingRatio: 1 };
 /** Friction torque in hinges (N·m): enough to stop dangling, too little to hold up the body. */
 const HINGE_FRICTION = 0.15;
-/** How fast (rad/s) a drooping joint tries to turn downwards; its torque is capped by `droop`. */
-const DROOP_SPEED = 4;
 
 export class Physics {
   readonly world: World;
@@ -380,7 +378,14 @@ export class Physics {
           s.kind === 'circle' && s.exact
             ? new Circle(new Vec2(s.x / PX, s.y / PX), (s.r + (s.noOutline ? 0 : PIECE_OUTLINE)) / PX)
             : withSkin(new Polygon(shapeOutline(s).map(([x, y]) => new Vec2(x / PX, y / PX))), s.noOutline ? THIN_SKIN : PIECE_OUTLINE);
-        body.createFixture(shape, { density: DENSITY, friction: s.friction ?? FRICTION, restitution: 0 });
+        // Segments in the same noCollide group share a negative group index: they never collide.
+        const group = (piece.def.noCollide ?? []).findIndex((g) => g.includes(i));
+        body.createFixture(shape, {
+          density: DENSITY,
+          friction: s.friction ?? FRICTION,
+          restitution: 0,
+          filterGroupIndex: group < 0 ? 0 : -(group + 1),
+        });
       }
       bodies.push(body);
     }
@@ -396,9 +401,9 @@ export class Physics {
               enableLimit: true,
               lowerAngle: j.hinge[0],
               upperAngle: j.hinge[1],
-              enableMotor: !j.loose || !!j.droop,
-              motorSpeed: j.droop ? DROOP_SPEED : 0,
-              maxMotorTorque: j.droop ?? (j.loose ? 0 : HINGE_FRICTION),
+              enableMotor: !j.loose,
+              motorSpeed: 0,
+              maxMotorTorque: j.loose ? 0 : HINGE_FRICTION,
               collideConnected: false,
             },
             bodies[j.a],
