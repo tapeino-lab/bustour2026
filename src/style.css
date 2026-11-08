@@ -182,7 +182,11 @@ button {
 .admin code { font-family: monospace; font-size: 11px; -webkit-user-select: all; user-select: all; word-break: break-all; }
 #admin-list { list-style: none; margin: 8px 0; padding: 0; overflow-y: auto; text-align: left; }
 #admin-list li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 2px solid #eee; font-size: 14px; }
-#admin-list img, #admin-list .noface { width: 44px; height: 44px; border: 2px solid var(--ink); border-radius: 50%; object-fit: cover; background: #ffe3c4; flex: none; }
+#admin-list img, #admin-list .noface, #admin-list canvas.after { width: 44px; height: 44px; border: 2px solid var(--ink); border-radius: 50%; object-fit: cover; background: #ffe3c4; flex: none; }
+/* The uploaded photo and, overlapping it, how the game shows it (evened out). */
+#admin-list .photos { display: flex; flex: none; }
+#admin-list canvas.after { margin-left: -8px; }
+#admin-list li > span:nth-child(2) { min-width: 0; }
 #admin-list label { margin-left: auto; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: var(--yellow); font-size: 12px; }
 #admin-list input { display: none; }
 

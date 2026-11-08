@@ -1,17 +1,129 @@
+import { ALL_PIECES } from './pieces';
 import type { FaceImages } from './render';
 
 /**
  * Face photos per piece id, filled after the device has joined (see online.ts).
  * Photos are never stored in this (public) repository. Pieces without a photo show a dummy face.
+ * Face photos are evened out for display (see enhanceFace); the stored photos stay untouched.
  */
 export const faces: FaceImages = new Map();
+
+/** Pieces drawn as a cut-out photo (like しげみ): shown as uploaded, not enhanced. */
+const SPRITE_IDS = new Set(ALL_PIECES.filter((p) => p.sprite).map((p) => p.id));
 
 export function setFaces(images: Map<string, string>): void {
   for (const [id, src] of images) {
     const img = new Image();
-    img.onload = () => faces.set(id, img);
+    img.onload = () => faces.set(id, SPRITE_IDS.has(id) ? img : enhancedFace(img));
     img.src = src;
   }
+}
+
+/** Target mean brightness (0–1) of the face area after enhancing. */
+const TARGET_BRIGHTNESS = 0.58;
+/** Colour boost (1 = unchanged) and sharpening strength (0 = none). */
+const SATURATION = 1.25;
+const SHARPEN = 1.0;
+/** How much each colour is stretched on its own (1) rather than with the brightness (0). */
+const COLOUR_BALANCE = 0.6;
+
+/**
+ * Evens out a face photo in place (RGBA pixels, w×h): measured on the round face area in the
+ * middle (what the game shows), the darkest and brightest parts are stretched to full contrast,
+ * the overall brightness is pulled to the same target for every photo, colours are boosted a
+ * little and edges are sharpened, so dim or blurry photos look alike and crisp when small.
+ */
+export function enhanceFace(data: Uint8ClampedArray, w: number, h: number): void {
+  const n = w * h;
+  const lum = new Float32Array(n);
+  for (let i = 0; i < n; i++) lum[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+
+  // Pixels of the face circle (ignoring the background in the corners).
+  const circle: number[] = [];
+  const cx = (w - 1) / 2;
+  const cy = (h - 1) / 2;
+  const r2 = (Math.min(w, h) * 0.45) ** 2;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= r2) circle.push(y * w + x);
+  /** Darkest and brightest (2% / 98%) of some values, at least 85 apart (no ×3+ stretch of flat images). */
+  const range = (values: number[]): [number, number] => {
+    const v = [...values].sort((a, b) => a - b);
+    const at = (q: number) => v[Math.min(v.length - 1, Math.floor(q * v.length))] ?? 0;
+    let lo = at(0.02);
+    let hi = at(0.98);
+    if (hi - lo < 85) {
+      const mid = (hi + lo) / 2;
+      lo = Math.max(0, mid - 42.5);
+      hi = Math.min(255, mid + 42.5);
+    }
+    return [lo, hi];
+  };
+  // Levels: mostly per colour (which also takes out a colour cast), partly by brightness.
+  const [lo, hi] = range(circle.map((i) => lum[i]));
+  const levels = [0, 1, 2].map((c) => {
+    const [clo, chi] = range(circle.map((i) => data[i * 4 + c]));
+    const t = new Float32Array(256);
+    for (let v = 0; v < 256; v++) {
+      const own = (v - clo) / (chi - clo);
+      const shared = (v - lo) / (hi - lo);
+      t[v] = Math.min(1, Math.max(0, COLOUR_BALANCE * own + (1 - COLOUR_BALANCE) * shared));
+    }
+    return t;
+  });
+  // Brightness: the face area's mean is pulled to the same target for every photo.
+  let mean = 0;
+  for (const i of circle) {
+    mean += 0.299 * levels[0][data[i * 4]] + 0.587 * levels[1][data[i * 4 + 1]] + 0.114 * levels[2][data[i * 4 + 2]];
+  }
+  mean = circle.length ? mean / circle.length : 0.5;
+  const gamma = Math.min(2.2, Math.max(0.45, Math.log(TARGET_BRIGHTNESS) / Math.log(Math.min(0.97, Math.max(0.03, mean)))));
+  const luts = levels.map((t) => t.map((v) => 255 * v ** gamma));
+
+  // Levels + brightness, then colour boost around each pixel's own grey.
+  const out = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const r = luts[0][data[i * 4]];
+    const g = luts[1][data[i * 4 + 1]];
+    const b = luts[2][data[i * 4 + 2]];
+    const y = 0.299 * r + 0.587 * g + 0.114 * b;
+    out[i * 3] = y + (r - y) * SATURATION;
+    out[i * 3 + 1] = y + (g - y) * SATURATION;
+    out[i * 3 + 2] = y + (b - y) * SATURATION;
+  }
+
+  // Sharpen (unsharp mask with a 5×5 box blur): edges stay clear when the photo is shown small.
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      for (let c = 0; c < 3; c++) {
+        let sum = 0;
+        let count = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          const yy = y + dy;
+          if (yy < 0 || yy >= h) continue;
+          for (let dx = -2; dx <= 2; dx++) {
+            const xx = x + dx;
+            if (xx < 0 || xx >= w) continue;
+            sum += out[(yy * w + xx) * 3 + c];
+            count++;
+          }
+        }
+        const v = out[(y * w + x) * 3 + c];
+        data[(y * w + x) * 4 + c] = v + (v - sum / count) * SHARPEN;
+      }
+    }
+  }
+}
+
+/** An enhanced copy of a face photo, ready to draw. */
+export function enhancedFace(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.drawImage(img, 0, 0);
+  const px = g.getImageData(0, 0, c.width, c.height);
+  enhanceFace(px.data, c.width, c.height);
+  g.putImageData(px, 0, 0);
+  return c;
 }
 
 /** Center-crops an image file to a square JPEG data URL (small enough for Firestore). */

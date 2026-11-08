@@ -13,7 +13,8 @@ export interface View {
   bgShift?: number;
 }
 
-export type FaceImages = Map<string, HTMLImageElement>;
+/** Face photos per piece id: as uploaded (cut-outs) or an enhanced copy (faces). */
+export type FaceImages = Map<string, HTMLImageElement | HTMLCanvasElement>;
 
 /** The one font used everywhere (also in CSS), so Android and iOS look the same. */
 export const FONT = '"Dela Gothic One", sans-serif';

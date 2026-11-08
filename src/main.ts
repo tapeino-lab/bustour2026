@@ -1,5 +1,5 @@
 import './style.css';
-import { faces, fileToFaceJpeg, fileToSpritePng, setFaces } from './faces';
+import { enhancedFace, faces, fileToFaceJpeg, fileToSpritePng, setFaces } from './faces';
 import type { NewRecords, Online, RankingKind, ScoreEntry } from './online';
 import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
@@ -605,6 +605,18 @@ async function showAdmin(): Promise<void> {
       const entry = current.get(a.id);
       if (entry) pic.src = entry.image;
       else pic.className = 'noface';
+      // Next to the uploaded photo: how the game shows it (evened out; cut-outs stay as they are).
+      const after = document.createElement('canvas');
+      after.className = 'after hidden';
+      const showAfter = () => {
+        if (a.sprite || !pic.src) return;
+        const e = enhancedFace(pic);
+        after.width = e.width;
+        after.height = e.height;
+        after.getContext('2d')!.drawImage(e, 0, 0);
+        after.classList.remove('hidden');
+      };
+      pic.addEventListener('load', showAfter);
       const name = document.createElement('span');
       name.textContent = a.name;
       // Registering and showing are separate: a photo appears in the game only while this is on.
@@ -652,7 +664,10 @@ async function showAdmin(): Promise<void> {
         input.value = '';
       });
       label.appendChild(input);
-      li.append(pic, name, show, label);
+      const photos = document.createElement('span');
+      photos.className = 'photos';
+      photos.append(pic, after);
+      li.append(photos, name, show, label);
       list.appendChild(li);
     }
   }
