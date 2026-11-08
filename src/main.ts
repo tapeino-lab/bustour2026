@@ -228,9 +228,20 @@ game.onGameOver = (score, height, tower) => {
   $('to-ranking').classList.toggle('hidden', !ranked);
   rotateBtn.classList.add('hidden');
   overEl.classList.remove('hidden');
+  alignToRankingButton();
   $('open-join').classList.toggle('hidden', !online || member);
   void checkForUpdate();
 };
+
+/**
+ * The score panel is shorter than the ranking panel, so つぎへ would sit higher than the
+ * ranking's もういちど！. Move it down (only the button; the panel stays as it is) by half the
+ * height difference, which is how far the centred layout puts the ranking's button lower.
+ */
+function alignToRankingButton(): void {
+  const panelH = document.querySelector<HTMLElement>('#over .result-panel')!.offsetHeight;
+  $('to-ranking').style.top = `calc((var(--rank-panel-h) - ${panelH}px) / 2)`;
+}
 
 $('retry').addEventListener('click', startGame);
 $('rv-retry').addEventListener('click', () => {

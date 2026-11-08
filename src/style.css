@@ -209,13 +209,13 @@ button {
 #over { gap: 12px; padding: 16px; }
 #over > .panel { padding: 8px 18px; }
 /*
- * The game-over panel and the ranking panel (after a game) are the same height, so their main
- * button (つぎへ / もういちど！) stays at the same spot when one screen turns into the other. The
- * height fits the ranking with its rename button.
+ * The ranking panel (after a game) always has this height (it fits the rename button), so its
+ * main button stays in one spot. The game-over score panel keeps its own height; its つぎへ button
+ * is moved down to that same spot (see alignToRankingButton in main.ts).
  */
-#over > .result-panel,
-#ranking-view > .ranking { min-height: 458px; }
-#over > .result-panel { justify-content: center; }
+:root { --rank-panel-h: 458px; }
+#ranking-view > .ranking { min-height: var(--rank-panel-h); }
+#to-ranking { position: relative; }
 .ranking { width: min(380px, 96%); padding: 8px 8px !important; display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
 .columns { display: flex; gap: 16px; justify-content: center; }
 .columns > div { flex: 1; min-width: 0; }
