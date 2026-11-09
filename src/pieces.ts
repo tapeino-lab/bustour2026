@@ -50,7 +50,7 @@ export interface SoftJoint {
 export interface PieceDef {
   id: string;
   name: string;
-  /** Variants of the same animal share a kind (they never come one after another). */
+  /** Variants of the same animal share a kind (e.g. the three cats). */
   kind?: string;
   parts: Shape[];
   details?: Shape[];

@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { SettleTracker, formatHeight, heightMeters, pieceIdForIndex } from './logic';
+import { PieceBag, SettleTracker, formatHeight, heightMeters, shuffle } from './logic';
 import { ANIMALS, BUS } from './pieces';
 
-describe('pieceIdForIndex', () => {
-  it('gives the bus first and never again', () => {
-    expect(pieceIdForIndex(1, () => 0.5)).toBe(BUS.id);
-    for (const n of [2, 10, 11, 20, 100]) expect(pieceIdForIndex(n, () => 0.5)).not.toBe(BUS.id);
-  });
-  it('covers every animal', () => {
-    const ids = new Set<string>();
-    for (let i = 0; i < ANIMALS.length; i++) ids.add(pieceIdForIndex(2, () => (i + 0.5) / ANIMALS.length));
-    expect(ids.size).toBe(ANIMALS.length);
-    expect(pieceIdForIndex(9, () => 0.9999999)).toBe(ANIMALS[ANIMALS.length - 1].id);
-  });
-  it('never repeats the previous animal, counting colour variants as the same animal', () => {
-    const kind = (id: string) => ANIMALS.find((a) => a.id === id)!.kind ?? id;
-    for (const prev of ANIMALS) {
-      for (let k = 0; k < 20; k++) expect(kind(pieceIdForIndex(5, () => k / 20, prev.id))).not.toBe(kind(prev.id));
+describe('PieceBag', () => {
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  it('starts every lap with the bus, then every animal once in a shuffled order', () => {
+    const bag = new PieceBag(rand);
+    const lap = ANIMALS.length + 1;
+    const ids = Array.from({ length: lap * 3 }, () => bag.next());
+    for (let l = 0; l < 3; l++) {
+      const part = ids.slice(l * lap, (l + 1) * lap);
+      expect(part[0]).toBe(BUS.id);
+      expect([...part.slice(1)].sort()).toEqual(ANIMALS.map((a) => a.id).sort());
     }
+    // Each lap is shuffled anew.
+    expect(ids.slice(1, lap)).not.toEqual(ids.slice(lap + 1, 2 * lap));
+  });
+  it('a new bag (a new game) starts over with the bus', () => {
+    const bag = new PieceBag(rand);
+    bag.next();
+    bag.next();
+    expect(new PieceBag(rand).next()).toBe(BUS.id);
+  });
+  it('shuffle keeps every item exactly once', () => {
+    const items = [1, 2, 3, 4, 5, 6];
+    expect([...shuffle(items, () => 0.999)].sort()).toEqual(items);
+    expect([...shuffle(items, () => 0)].sort()).toEqual(items);
   });
 });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FREE_FALL_GRAVITY, Game, SPAWN_GAP } from './game';
 import { GROUND_TOP, towerTop } from './physics';
+import { ALL_PIECES } from './pieces';
 
 function seeded(seed = 1): () => number {
   let s = seed;
@@ -149,17 +150,20 @@ describe('game over timing', () => {
 });
 
 describe('piece order', () => {
-  it('starts with the bus and never shows the same animal twice in a row', () => {
+  it('comes in laps: the bus, then every animal once, then the bus again', () => {
     const g = new Game(seeded(7), 700);
     g.start();
-    expect(g.current!.def.id).toBe('bus');
-    const ids: string[] = [];
+    const ids: string[] = [g.current!.def.id];
     for (let i = 0; i < 60; i++) {
       ids.push(g.next!.def.id);
       // Advance the queue without playing: spawn the next piece directly.
       (g as unknown as { spawn(): void }).spawn();
     }
-    expect(ids).not.toContain('bus');
-    for (let i = 1; i < ids.length; i++) expect(ids[i]).not.toBe(ids[i - 1]);
+    const lap = ALL_PIECES.length; // the bus + every animal
+    ids.forEach((id, i) => expect(id === 'bus').toBe(i % lap === 0));
+    expect(new Set(ids.slice(0, lap)).size).toBe(lap);
+    // A new game starts over with the bus.
+    g.start();
+    expect(g.current!.def.id).toBe('bus');
   });
 });

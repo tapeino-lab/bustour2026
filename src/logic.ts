@@ -3,17 +3,29 @@ import { ANIMALS, BUS } from './pieces';
 export const PX_PER_METER = 50;
 
 /**
- * Which piece comes as the n-th piece (1-based): the bus first (only then), and after that a
- * random animal that is never the same animal as the previous one (`prevId`) — colour variants
- * of one animal (same `kind`) count as the same.
+ * The order the pieces come in, one game at a time, in laps: every lap starts with the bus,
+ * followed by all the animals once each in a shuffled order (colour variants are separate
+ * animals). After the last animal the next lap starts, again with the bus and a new shuffle.
  */
-export function pieceIdForIndex(n: number, rand: () => number, prevId?: string): string {
-  if (n === 1) return BUS.id;
-  const kindOf = (id: string | undefined) => ANIMALS.find((a) => a.id === id)?.kind ?? id;
-  const prevKind = kindOf(prevId);
-  const choices = ANIMALS.filter((a) => (a.kind ?? a.id) !== prevKind);
-  const i = Math.min(choices.length - 1, Math.floor(rand() * choices.length));
-  return choices[i].id;
+export class PieceBag {
+  private lap: string[] = [];
+
+  constructor(private readonly rand: () => number = Math.random) {}
+
+  next(): string {
+    if (this.lap.length === 0) this.lap = [BUS.id, ...shuffle(ANIMALS.map((a) => a.id), this.rand)];
+    return this.lap.shift()!;
+  }
+}
+
+/** A shuffled copy (Fisher–Yates). */
+export function shuffle<T>(items: T[], rand: () => number): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.min(i, Math.floor(rand() * (i + 1)));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 /** Tower height in metres, kept to two decimals (shown with one, see formatHeight). */

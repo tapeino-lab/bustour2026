@@ -1,4 +1,4 @@
-import { SettleTracker, clamp, formatHeight, heightMeters, pieceIdForIndex } from './logic';
+import { PieceBag, SettleTracker, clamp, formatHeight, heightMeters } from './logic';
 import { pieceById } from './pieces';
 import { GROUND_TOP, PieceBody, Physics, WORLD_WIDTH, towerTop } from './physics';
 import { FONT, INK, drawPoof, drawPreview, drawWorld, type FaceImages, type View } from './render';
@@ -47,6 +47,8 @@ export class Game {
 
   private physics: Physics;
   private count = 0;
+  /** Order of the coming pieces (laps: the bus, then every animal shuffled). */
+  private bag = new PieceBag();
   private aimX = WORLD_WIDTH / 2;
   private angle = 0;
   private radius = 0;
@@ -104,15 +106,15 @@ export class Game {
     this.overFrames = 0;
     this.aimX = WORLD_WIDTH / 2;
     this.camTop = this.baseCamTop();
-    this.next = new PieceBody(pieceById(pieceIdForIndex(1, this.rand)));
+    this.bag = new PieceBag(this.rand);
+    this.next = new PieceBody(pieceById(this.bag.next()));
     this.spawn();
   }
 
   private spawn(): void {
     this.count++;
     this.current = this.next;
-    // Never the same kind twice in a row.
-    this.next = new PieceBody(pieceById(pieceIdForIndex(this.count + 1, this.rand, this.current?.def.id)));
+    this.next = new PieceBody(pieceById(this.bag.next()));
     if (!this.current) return;
     this.angle = 0;
     this.radius = this.current.radius;
