@@ -15,8 +15,12 @@ const HUD_SPACE = 100;
 const GROUND_FROM_BOTTOM = 190;
 /** Steps between a piece falling off and the game-over screen. */
 const OVER_DELAY_FRAMES = 1;
-/** A piece this far below the screen bottom ends the game even if it is still touching something. */
+/** A piece this far below the ground view's bottom ends the game even if it is still touching something. */
 const FAR_BELOW = 200;
+/** When the camera follows a falling piece down, it keeps this much room below the piece. */
+const FOLLOW_MARGIN = 60;
+/** A piece moving down faster than this (px per step) is followed by the camera. */
+const FOLLOW_SPEED = 0.5;
 /** How fast the background mountain scrolls compared with the tower. */
 const BG_PARALLAX = 0.3;
 /** A new piece pops out of a smoke cloud: it grows to full size over this many steps… */
@@ -245,11 +249,12 @@ export class Game {
   }
 
   /**
-   * Game over when a falling piece that touches nothing reaches the bottom edge of the screen
-   * (or, as a safety net, is far below it).
+   * Game over when a falling piece that touches nothing goes below the ground: past the bottom
+   * edge of the screen as it is when the camera shows the platform (or, as a safety net, far
+   * below it). A piece that leaves a raised view but lands on the tower or the platform is fine.
    */
   private fellOff(p: PieceBody): boolean {
-    const bottom = this.camTop + this.viewH;
+    const bottom = GROUND_TOP + GROUND_FROM_BOTTOM;
     const maxY = p.bounds.maxY;
     return (maxY >= bottom && !p.touching) || maxY >= bottom + FAR_BELOW;
   }
@@ -260,13 +265,26 @@ export class Game {
   }
 
   private updateCamera(): void {
-    let target = this.baseCamTop();
+    const base = this.baseCamTop();
+    let target = base;
+    let speed = 0.12;
     if (this.current) {
       target = Math.min(target, this.current.y - this.radius - HUD_SPACE);
     } else if (this.pieces.length) {
       target = Math.min(target, this.camTop);
+      // A piece falling below the view (the dropped one missing the tower, or one knocked off):
+      // move down just enough to keep it in sight, so the player can see where it ends up.
+      // Never lower than the view of the platform.
+      for (const p of this.pieces) {
+        if (p.velocityY < FOLLOW_SPEED) continue;
+        const need = p.bounds.maxY + FOLLOW_MARGIN - this.viewH;
+        if (need > target) {
+          target = Math.min(base, need);
+          speed = 0.3;
+        }
+      }
     }
-    this.camTop += (target - this.camTop) * 0.12;
+    this.camTop += (target - this.camTop) * speed;
   }
 
   /** `alpha` (0..1) is how far we are between the last physics step and the next one. */

@@ -126,7 +126,17 @@ describe('best height', () => {
 });
 
 describe('game over timing', () => {
-  it('ends only when a free-falling piece reaches the bottom edge of the screen', () => {
+  it('a piece that leaves a raised view but lands on the platform is safe', () => {
+    const g = new Game(seeded(), 700);
+    g.start();
+    // As if the tower were tall: the camera far above the platform.
+    (g as unknown as { camTop: number }).camTop = GROUND_TOP - 3000;
+    g.drop();
+    for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
+    expect(g.state).toBe('aim');
+    expect(g.score).toBe(1);
+  });
+  it('ends only when a free-falling piece goes below the ground view', () => {
     const viewH = 700;
     const g = new Game(seeded(), viewH);
     g.start();
@@ -135,7 +145,7 @@ describe('game over timing', () => {
     g.pointerMove(5);
     g.pointerUp();
     const piece = g.pieces[0];
-    const screenBottom = GROUND_TOP - (viewH - 190) + viewH; // camera at its start position
+    const screenBottom = GROUND_TOP + 190; // bottom of the screen when the camera shows the platform
     let lastMaxY = -Infinity;
     for (let i = 0; i < 2000 && g.state === 'drop'; i++) {
       lastMaxY = piece.bounds.maxY;
