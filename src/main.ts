@@ -318,6 +318,8 @@ bgmToggle.addEventListener('click', async () => {
 // ---- Online: join code, face photos, admin upload -------------------------------------------
 let online: Online | null = null;
 let member = false;
+/** An admin device (test plays): its games are never put on the ranking. */
+let adminDevice = false;
 const joinEl = $('join');
 const joinInput = $<HTMLInputElement>('join-code');
 
@@ -342,6 +344,7 @@ async function becomeMember(): Promise<void> {
   $('ranking-open').classList.remove('hidden');
   setFaces(await online.loadFaces());
   myEntry = await online.myScore().catch(() => null);
+  adminDevice = await online.isAdmin().catch(() => false);
 }
 
 // ---- Rankings (members only) ------------------------------------------------------------------
@@ -442,7 +445,7 @@ async function saveEntry(entry: Omit<ScoreEntry, 'uid'>, records: NewRecords = {
 
 /** After a game: register a new personal best (asking for a name the first time). */
 async function updateRanking(score: number, height: number, tower: string): Promise<void> {
-  if (!online) return;
+  if (!online || adminDevice) return;
   try {
     // Nothing to register for a game where no piece was stacked.
     const game = { count: score, height };
