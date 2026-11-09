@@ -401,7 +401,12 @@ function key(label: string, onPress: () => void, className = ''): HTMLButtonElem
 let nameResolve: ((name: string | null) => void) | null = null;
 
 /** Asks for a three-letter hiragana name; null if the player chose not to register. */
+/**
+ * Asks for a name. The first time (no name yet) the other button is のせない (the record is not
+ * put on the ranking); when renaming it is キャンセル (the old name stays).
+ */
 function askName(current: string): Promise<string | null> {
+  $('name-skip').textContent = current ? 'キャンセル' : 'のせない';
   typedName = current;
   showTypedName();
   showOverlay(nameEl, true);
