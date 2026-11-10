@@ -264,10 +264,6 @@ const RAW_ANIMALS: PieceDef[] = [
     // and its legs dangle.
     id: 'axolotl', name: 'うーぱーるーぱー',
     parts: [
-      circle(-40, 0, 18, '#f7a8c4', 0),
-      polySeg(0, '#e57aa3', [-50, -12], [-64, -24], [-58, -29], [-46, -16]),
-      polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
-      polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
       // The body in two halves (front: segment 1, back: segment 8) that overlap a little, so the
       // seam stays hidden when it bends. Each half is rounded only at its outer end: a square
       // block at the inner end keeps the body straight-sided there (no waist at the seam).
@@ -284,6 +280,11 @@ const RAW_ANIMALS: PieceDef[] = [
       { ...limb('#f7a8c4', -28, 26, -40, 34, 7), seg: 4, friction: 0.2 },
       { ...limb('#f7a8c4', 16, 15, 24, 26, 8), seg: 5 },
       { ...limb('#f7a8c4', 24, 26, 36, 34, 7), seg: 6, friction: 0.2 },
+      // The head (with its gills) last, so it is drawn in front of the legs.
+      circle(-40, 0, 18, '#f7a8c4', 0),
+      polySeg(0, '#e57aa3', [-50, -12], [-64, -24], [-58, -29], [-46, -16]),
+      polySeg(0, '#e57aa3', [-42, -17], [-44, -34], [-37, -34], [-35, -17]),
+      polySeg(0, '#e57aa3', [-30, -13], [-21, -28], [-16, -24], [-25, -11]),
     ],
     details: [
       ...toes(-42, 36, '#e57aa3', 4), ...toes(38, 36, '#e57aa3', 6),
@@ -293,8 +294,9 @@ const RAW_ANIMALS: PieceDef[] = [
     face: { x: -40, y: 0, r: 14, seg: 0 },
     // Only the body has to come to rest: the floppy head, tail and legs do not hold up the game.
     settleSegments: [1, 8],
-    // The tail hangs down past the back legs instead of resting on them.
-    noCollide: [[2, 7, 3, 4, 5, 6]],
+    // The tail hangs down past the back legs instead of resting on them, and the head passes in
+    // front of the front legs instead of bumping into them.
+    noCollide: [[0, 2, 7, 3, 4, 5, 6]],
     joints: [
       // The neck: springy, but bends at most 30° down or up.
       { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1, limit: [-0.52, 0.52] },
