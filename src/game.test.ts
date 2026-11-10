@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FREE_FALL_GRAVITY, Game, SPAWN_GAP } from './game';
-import { GROUND_TOP, towerTop } from './physics';
+import { GROUND_TOP, WORLD_WIDTH, towerTop } from './physics';
 import { ALL_PIECES } from './pieces';
 
 function seeded(seed = 1): () => number {
@@ -122,6 +122,21 @@ describe('best height', () => {
     // The snapshot is the tower as it last stood: one piece, not the one that fell.
     expect(tower.startsWith('v1|')).toBe(true);
     expect(tower.split(';')).toHaveLength(1);
+  });
+});
+
+describe('spawning', () => {
+  it('every piece appears in the middle, wherever the last one was dropped', () => {
+    const g = new Game(seeded(), 700);
+    g.start();
+    expect(g.current!.x).toBe(WORLD_WIDTH / 2);
+    // Drop the bus a little to the right; it still lands on the platform.
+    g.pointerDown(180);
+    g.pointerMove(200);
+    g.pointerUp();
+    for (let i = 0; i < 900 && g.state === 'drop'; i++) g.step();
+    expect(g.state).toBe('aim');
+    expect(g.current!.x).toBe(WORLD_WIDTH / 2);
   });
 });
 

@@ -123,7 +123,8 @@ export class Game {
     this.angle = 0;
     this.radius = this.current.radius;
     const top = towerTop(this.pieces);
-    this.aimX = clamp(this.aimX, this.radius * 0.5, WORLD_WIDTH - this.radius * 0.5);
+    // Every piece appears in the middle (not where the last one was dropped).
+    this.aimX = WORLD_WIDTH / 2;
     this.current.setPose(this.aimX, top - SPAWN_GAP - this.radius, 0);
     this.poof = { x: this.current.x, y: this.current.y, size: Math.max(34, this.radius * 0.95) };
     this.onSound('spawn', Math.sqrt(this.current.area));
