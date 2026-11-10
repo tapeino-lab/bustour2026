@@ -41,6 +41,8 @@ export interface SoftJoint {
    * from its starting angle, e.g. a knee that only bends outwards.
    */
   hinge?: [number, number];
+  /** For a weld (no `hinge`): the most it may bend each way, [min, max] radians, like a stiff neck. */
+  limit?: [number, number];
   /** A hinge that swings freely (no friction), like a dangling tail. */
   loose?: boolean;
   /** Hinge range once the piece has touched something (until then `hinge` applies); 'free' = no limit. */
@@ -294,7 +296,8 @@ const RAW_ANIMALS: PieceDef[] = [
     // The tail hangs down past the back legs instead of resting on them.
     noCollide: [[2, 7, 3, 4, 5, 6]],
     joints: [
-      { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1 },
+      // The neck: springy, but bends at most 30° down or up.
+      { a: 0, b: 1, x: -26, y: 4, hz: 2, damping: 1, limit: [-0.52, 0.52] },
       // The middle of the body: a soft weld, so it sags and bends but keeps its shape.
       { a: 1, b: 8, x: 2, y: 6, hz: 4, damping: 1 },
       // The tail hangs limp: both joints swing freely. The root turns 45° down and 45° up (90°

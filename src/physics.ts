@@ -122,6 +122,8 @@ export class PieceBody {
   bodies: Body[] = [];
   /** Joints between segments (until the piece is frozen). */
   joints: Joint[] = [];
+  /** Extra limit hinges for welds that may only bend so far (see SoftJoint.limit). */
+  limitJoints: Joint[] = [];
   /** True once the dropped piece has touched something (another piece or the platform). */
   landed = false;
   /** Steps in a row that this landed soft piece has only moved a little (see CALM_SPEED). */
@@ -390,6 +392,7 @@ export class Physics {
       bodies.push(body);
     }
     piece.joints = [];
+    piece.limitJoints = [];
     for (const j of piece.def.joints ?? []) {
       const anchor = piece.localToWorld(j.x, j.y);
       const at = new Vec2(anchor.x / PX, anchor.y / PX);
@@ -422,6 +425,18 @@ export class Physics {
           );
       const created = this.world.createJoint(joint);
       if (created) piece.joints.push(created);
+      // A springy weld that may bend only so far: a free hinge with limits alongside it.
+      if (!j.hinge && j.limit) {
+        const stop = this.world.createJoint(
+          new RevoluteJoint(
+            { enableLimit: true, lowerAngle: j.limit[0], upperAngle: j.limit[1], collideConnected: false },
+            bodies[j.a],
+            bodies[j.b],
+            at,
+          ),
+        );
+        if (stop) piece.limitJoints.push(stop);
+      }
     }
     piece.bodies = bodies;
     if (bodies.length > 1) this.softPieces.add(piece);
@@ -445,8 +460,9 @@ export class Physics {
       const dy = q.y - p0.y;
       rel.push({ x: dx * c0 + dy * s0, y: -dx * s0 + dy * c0, angle: q.angle - p0.angle });
     }
-    for (const j of piece.joints) this.world.destroyJoint(j);
+    for (const j of [...piece.joints, ...piece.limitJoints]) this.world.destroyJoint(j);
     piece.joints = [];
+    piece.limitJoints = [];
     for (let i = 1; i < piece.segments; i++) {
       const r = rel[i];
       const c = Math.cos(r.angle);
