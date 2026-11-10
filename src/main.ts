@@ -318,7 +318,10 @@ bgmToggle.addEventListener('click', async () => {
 // ---- Online: join code, face photos, admin upload -------------------------------------------
 let online: Online | null = null;
 let member = false;
-/** An admin device (test plays): its games are never put on the ranking. */
+/**
+ * An admin device opened with ?admin=1 (test plays): its games are not put on the ranking.
+ * Without ?admin=1 an admin plays and ranks like everyone else.
+ */
 let adminDevice = false;
 const joinEl = $('join');
 const joinInput = $<HTMLInputElement>('join-code');
@@ -344,7 +347,7 @@ async function becomeMember(): Promise<void> {
   $('ranking-open').classList.remove('hidden');
   setFaces(await online.loadFaces());
   myEntry = await online.myScore().catch(() => null);
-  adminDevice = await online.isAdmin().catch(() => false);
+  adminDevice = params.get('admin') === '1' && (await online.isAdmin().catch(() => false));
 }
 
 // ---- Rankings (members only) ------------------------------------------------------------------
