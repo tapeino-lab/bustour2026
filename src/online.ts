@@ -3,8 +3,8 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
-  collection, connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, orderBy, query,
-  serverTimestamp, setDoc, Timestamp, where, type Firestore,
+  collection, connectFirestoreEmulator, deleteDoc, deleteField, doc, getDoc, getDocs, getFirestore, increment, limit,
+  orderBy, query, serverTimestamp, setDoc, Timestamp, where, writeBatch, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 import { DEFAULT_ENHANCE, ENHANCE_LEVELS, type Enhance, type FacePhoto } from './faces';
@@ -73,6 +73,15 @@ function toEntry(uid: string, data: Record<string, unknown>): ScoreEntry {
 }
 
 export type RankingKind = 'height' | 'count';
+
+/** One player's (device's) play history: how many games and when the last one ended. */
+export interface PlayRecord {
+  uid: string;
+  count: number;
+  lastAt?: number;
+  /** The player's name when they last played, if they had one. */
+  name?: string;
+}
 export const RANKING_SIZE = 10;
 
 export class Online {
@@ -212,6 +221,53 @@ export class Online {
 
   async saveBgm(audio: string): Promise<void> {
     await setDoc(doc(this.db, 'media', 'bgm'), { audio, updatedAt: serverTimestamp() });
+  }
+
+  /** Counts one finished game for this device's play history. */
+  async recordPlay(name?: string): Promise<void> {
+    const data: Record<string, unknown> = { count: increment(1), lastAt: serverTimestamp() };
+    if (name) data.name = name;
+    await setDoc(doc(this.db, 'plays', this.uid), data, { merge: true });
+  }
+
+  /** Every player's play history (admins only). */
+  async allPlays(): Promise<PlayRecord[]> {
+    const snap = await getDocs(collection(this.db, 'plays'));
+    return snap.docs.map((d) => {
+      const lastAt = d.get('lastAt');
+      const name = d.get('name');
+      return {
+        uid: d.id,
+        count: Number(d.get('count')) || 0,
+        lastAt: lastAt instanceof Timestamp ? lastAt.toMillis() : undefined,
+        name: typeof name === 'string' ? name : undefined,
+      };
+    });
+  }
+
+  /**
+   * Resets one ranking (admins only): everyone's count record (or height record) is cleared,
+   * the other record stays. An entry left with neither record is deleted. Returns how many
+   * entries had that record.
+   */
+  async resetRanking(kind: RankingKind): Promise<number> {
+    const other: RankingKind = kind === 'count' ? 'height' : 'count';
+    const cleared =
+      kind === 'count'
+        ? { count: 0, countHeight: deleteField(), countAt: deleteField(), towerCount: deleteField() }
+        : { height: 0, heightCount: deleteField(), heightAt: deleteField(), towerHeight: deleteField() };
+    const snap = await getDocs(collection(this.db, 'scores'));
+    const docs = snap.docs.filter((d) => Number(d.get(kind)) > 0);
+    // Small batches keep each request well under Firestore's per-request rule limits.
+    for (let i = 0; i < docs.length; i += 10) {
+      const batch = writeBatch(this.db);
+      for (const d of docs.slice(i, i + 10)) {
+        if (Number(d.get(other)) > 0) batch.set(d.ref, { ...cleared, updatedAt: serverTimestamp() }, { merge: true });
+        else batch.delete(d.ref);
+      }
+      await batch.commit();
+    }
+    return docs.length;
   }
 
   /** Every ranking entry (admins only, for the admin page). */

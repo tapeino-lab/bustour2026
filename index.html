@@ -104,21 +104,41 @@
       </section>
       <section id="admin" class="overlay hidden">
         <div class="panel admin">
-          <h3>かお とうろく</h3>
-          <p class="small">しゃしんの みぎに かさなっているのが、ゲームでの みえかた（あかるさ・くっきりを そろえたもの）</p>
+          <h3>かんり</h3>
           <p class="small">この たんまつの ID: <code id="admin-uid"></code></p>
           <p id="admin-status" class="small"></p>
-          <ul id="admin-list"></ul>
-          <div id="admin-scores" class="admin-scores hidden">
-            <button id="admin-scores-btn" class="comic-btn sub" type="button">ランキングの きろくを みる</button>
-            <p class="small">おなじ なまえが ふたつ あるときは、「ほぞん」が ふるい ほうを けしてね</p>
-            <span id="admin-scores-status" class="small"></span>
-            <ul id="admin-scores-list"></ul>
+          <div id="admin-tabs" class="admin-tabs hidden" role="tablist">
+            <button type="button" role="tab" data-tab="faces" aria-selected="true">かお</button>
+            <button type="button" role="tab" data-tab="ranking" aria-selected="false">ランキング</button>
+            <button type="button" role="tab" data-tab="plays" aria-selected="false">りれき</button>
+            <button type="button" role="tab" data-tab="bgm" aria-selected="false">BGM</button>
           </div>
-          <div id="admin-bgm" class="admin-bgm hidden">
-            <span>BGM（mp3、700KBまで）</span>
-            <label class="chip">ファイル<input id="admin-bgm-file" type="file" accept="audio/*" /></label>
-            <span id="admin-bgm-status" class="small"></span>
+          <div class="admin-body">
+            <div id="tab-faces" class="admin-tab hidden">
+              <p class="small">どうぶつを えらんで しゃしんを とうろく（まんなかを せいほうけいに きりとります）。しゃしんの みぎに かさなっているのが、ゲームでの みえかた。</p>
+              <ul id="admin-list"></ul>
+            </div>
+            <div id="tab-ranking" class="admin-tab hidden">
+              <div class="admin-resets">
+                <button id="admin-reset-count" class="reset-btn" type="button">こすうを リセット</button>
+                <button id="admin-reset-height" class="reset-btn" type="button">たかさを リセット</button>
+              </div>
+              <p id="admin-reset-status" class="small"></p>
+              <p class="small">おなじ なまえが ふたつ あるときは、「ほぞん」が ふるい ほうを けしてね</p>
+              <p id="admin-scores-status" class="small"></p>
+              <ul id="admin-scores-list"></ul>
+            </div>
+            <div id="tab-plays" class="admin-tab hidden">
+              <p id="admin-plays-status" class="small"></p>
+              <ul id="admin-plays-list"></ul>
+            </div>
+            <div id="tab-bgm" class="admin-tab hidden">
+              <div class="admin-bgm">
+                <span>BGM（mp3、700KBまで）</span>
+                <label class="chip">ファイル<input id="admin-bgm-file" type="file" accept="audio/*" /></label>
+                <span id="admin-bgm-status" class="small"></span>
+              </div>
+            </div>
           </div>
           <button id="admin-close" class="comic-btn sub">とじる</button>
         </div>

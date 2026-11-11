@@ -14,7 +14,10 @@ rules_version = '2';
 //                    a player's two records for the rankings, members only. Each record is kept as
 //                    the set from the game that made it: the count record (count + that game's
 //                    height + its tower + when) and the height record (height + that game's count
-//                    + its tower + when). Older entries lack the partner numbers.
+//                    + its tower + when). Older entries lack the partner numbers. An admin can
+//                    reset one ranking: that record becomes 0 (an entry with neither is deleted).
+//   plays/{uid}      { count, lastAt, name? }  play history per device (games played, last game);
+//                    written by the device, read by admins
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -51,6 +54,23 @@ service cloud.firestore {
     // A record (valueKey, with partnerKey from the same game and its time timeKey) may only get
     // better: a higher value, or the same value with a higher partner. Then its time is now;
     // otherwise the partner and the time stay as they were.
+    // Admin reset of one record: either all of it unchanged, or the value 0 and the rest gone.
+    function keptOrReset(valueKey, partnerKey, timeKey, towerKey) {
+      let d = request.resource.data;
+      let old = resource.data;
+      return (d[valueKey] == old[valueKey]
+          && d.get(partnerKey, null) == old.get(partnerKey, null)
+          && d.get(timeKey, null) == old.get(timeKey, null)
+          && d.get(towerKey, null) == old.get(towerKey, null))
+        || (d[valueKey] == 0 && !d.keys().hasAny([partnerKey, timeKey, towerKey]));
+    }
+    function validPlay(d) {
+      return d.keys().hasAll(['count', 'lastAt'])
+        && d.keys().hasOnly(['count', 'lastAt', 'name'])
+        && d.count is int
+        && d.lastAt == request.time
+        && (!('name' in d) || (d.name is string && d.name.matches('^[ぁ-ゖー]{1,3}$')));
+    }
     function recordUpdate(valueKey, partnerKey, timeKey) {
       let d = request.resource.data;
       let old = resource.data;
@@ -93,11 +113,27 @@ service cloud.firestore {
       allow read: if isMember() || isAdmin();
       allow create: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
         && newRecordTime('countAt') && newRecordTime('heightAt');
-      allow update: if isMember() && request.auth.uid == uid && validScore(request.resource.data)
-        && recordUpdate('count', 'countHeight', 'countAt')
-        && recordUpdate('height', 'heightCount', 'heightAt');
-      // Only admins may delete (ranking reset from the admin page).
+      allow update: if (isMember() && request.auth.uid == uid && validScore(request.resource.data)
+          && recordUpdate('count', 'countHeight', 'countAt')
+          && recordUpdate('height', 'heightCount', 'heightAt'))
+        // An admin resets the count or the height ranking: that record goes to 0 (with its
+        // partner, time and tower removed); everything else stays.
+        || (isAdmin() && validScore(request.resource.data)
+          && request.resource.data.name == resource.data.name
+          && keptOrReset('count', 'countHeight', 'countAt', 'towerCount')
+          && keptOrReset('height', 'heightCount', 'heightAt', 'towerHeight'));
+      // Only admins may delete (one entry, or an entry left with no record after a reset).
       allow delete: if isAdmin();
+    }
+
+    // Play history: one doc per device, counting its finished games. Written by the device
+    // itself (one more game each time), read by admins only.
+    match /plays/{uid} {
+      allow read, delete: if isAdmin();
+      allow create: if isMember() && request.auth.uid == uid && validPlay(request.resource.data)
+        && request.resource.data.count == 1;
+      allow update: if isMember() && request.auth.uid == uid && validPlay(request.resource.data)
+        && request.resource.data.count == resource.data.count + 1;
     }
 
     // Background music: readable by members (and admins), writable by admins only.

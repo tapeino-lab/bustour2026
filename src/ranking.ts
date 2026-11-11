@@ -30,7 +30,8 @@ export function partner(r: ScoreEntry, kind: RankingKind): number {
  */
 export function topRows(real: ScoreEntry[], kind: RankingKind, size = RANKING_ROWS): RankingRow[] {
   const at = (r: RankingRow) => (kind === 'count' ? r.countAt : r.heightAt) ?? Infinity;
-  const rows: RankingRow[] = [...real, ...DUMMY_ROWS];
+  // A record that was reset (0) is not on that ranking.
+  const rows: RankingRow[] = [...real.filter((r) => r[kind] > 0), ...DUMMY_ROWS];
   return rows
     .sort(
       (a, b) =>

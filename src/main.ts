@@ -3,7 +3,7 @@ import {
   DEFAULT_ENHANCE, ENHANCE_LABELS, ENHANCE_LEVELS, enhancedFace, faces, fileToFaceJpeg, fileToSpritePng, setFaces,
   type Enhance,
 } from './faces';
-import type { NewRecords, Online, RankingKind, ScoreEntry } from './online';
+import type { NewRecords, Online, PlayRecord, RankingKind, ScoreEntry } from './online';
 import { ALL_PIECES } from './pieces';
 import { Game, STEP_MS } from './game';
 import { WORLD_WIDTH } from './physics';
@@ -224,6 +224,11 @@ game.onGameOver = (score, height, tower) => {
   // Members see only the score first, then "つぎへ" leads to the ranking (with もういちど there).
   const ranked = !!online && member;
   rankingSaved = ranked ? updateRanking(score, height, tower) : Promise.resolve();
+  // Play history (members, not admin test plays): after the ranking, so a first name is known.
+  if (ranked && !adminDevice) {
+    const o = online!;
+    void rankingSaved.then(() => o.recordPlay(myEntry?.name ?? (loadName() || undefined))).catch(() => undefined);
+  }
   $('retry').classList.toggle('hidden', ranked);
   $('to-ranking').classList.toggle('hidden', !ranked);
   rotateBtn.classList.add('hidden');
@@ -450,6 +455,8 @@ async function saveEntry(entry: Omit<ScoreEntry, 'uid'>, records: NewRecords = {
 async function updateRanking(score: number, height: number, tower: string): Promise<void> {
   if (!online || adminDevice) return;
   try {
+    // Compare with the records as they are now (an admin may have reset or deleted them).
+    myEntry = await online.myScore().catch(() => myEntry);
     // Nothing to register for a game where no piece was stacked.
     const game = { count: score, height };
     const countUp = score > 0 && beatsRecord(game, myEntry, 'count');
@@ -626,8 +633,10 @@ async function showAdmin(): Promise<void> {
   $('admin-uid').textContent = o.uid;
   const admin = await o.isAdmin().catch(() => false);
   $('admin-status').textContent = admin
-    ? 'どうぶつを えらんで しゃしんを とうろく（まんなかを せいほうけいに きりとります）'
+    ? ''
     : 'まだ かんりしゃでは ありません。上の ID を Firestore の admins に とうろくしてね';
+  $('admin-tabs').classList.toggle('hidden', !admin);
+  if (admin) showAdminTab(o, 'faces');
   const list = $('admin-list');
   list.replaceChildren();
   if (admin) {
@@ -747,9 +756,25 @@ async function showAdmin(): Promise<void> {
     }
   }
   if (admin) {
-    $('admin-scores').classList.remove('hidden');
-    $('admin-scores-btn').onclick = () => void showAdminScores(o);
-    $('admin-bgm').classList.remove('hidden');
+    for (const tab of document.querySelectorAll<HTMLButtonElement>('#admin-tabs [data-tab]')) {
+      tab.onclick = () => showAdminTab(o, tab.dataset.tab as AdminTab);
+    }
+    const resetStatus = $('admin-reset-status');
+    for (const kind of ['count', 'height'] as RankingKind[]) {
+      const label = kind === 'count' ? 'こすう' : 'たかさ';
+      $(kind === 'count' ? 'admin-reset-count' : 'admin-reset-height').onclick = async () => {
+        if (!window.confirm(`${label}の ランキングを リセットしますか？（もとに もどせません。${kind === 'count' ? 'たかさ' : 'こすう'}は そのまま）`)) return;
+        resetStatus.textContent = 'リセットちゅう…';
+        try {
+          const n = await o.resetRanking(kind);
+          resetStatus.textContent = `${label}を リセットしました（${n}けん）`;
+          await showAdminScores(o);
+        } catch (e) {
+          // Show why (e.g. permission-denied when the console still has older rules).
+          resetStatus.textContent = `しっぱい（${(e as { code?: string }).code ?? String(e)}）`;
+        }
+      };
+    }
     const fileInput = $<HTMLInputElement>('admin-bgm-file');
     fileInput.onchange = async () => {
       const file = fileInput.files?.[0];
@@ -777,6 +802,59 @@ async function showAdmin(): Promise<void> {
   }
   showOverlay(adminEl, true);
 }
+type AdminTab = 'faces' | 'ranking' | 'plays' | 'bgm';
+
+/** Admin page tabs: shows one, and loads the ranking / play history fresh when opened. */
+function showAdminTab(o: Online, tab: AdminTab): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#admin-tabs [data-tab]')) {
+    b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  }
+  for (const t of ['faces', 'ranking', 'plays', 'bgm'] as AdminTab[]) $(`tab-${t}`).classList.toggle('hidden', t !== tab);
+  if (tab === 'ranking') void showAdminScores(o);
+  if (tab === 'plays') void showAdminPlays(o);
+}
+
+/** Short date and time, e.g. 11/11 21:40. */
+function shortDate(ms?: number): string {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Admin page: every player's number of games and last game, most recent first. */
+async function showAdminPlays(o: Online): Promise<void> {
+  const status = $('admin-plays-status');
+  const list = $('admin-plays-list');
+  status.textContent = 'よみこみちゅう…';
+  let plays: PlayRecord[];
+  const names = new Map<string, string>();
+  try {
+    plays = await o.allPlays();
+    // The ranking name is the newest one; the play history keeps the name from the last game.
+    for (const e of await o.allScores().catch(() => [])) names.set(e.uid, e.name);
+  } catch (e) {
+    status.textContent = `しっぱい（${(e as { code?: string }).code ?? String(e)}）`;
+    return;
+  }
+  plays.sort((a, b) => (b.lastAt ?? 0) - (a.lastAt ?? 0));
+  const total = plays.reduce((n, p) => n + p.count, 0);
+  status.textContent = `${plays.length}にん・ぜんぶで ${total}かい`;
+  list.replaceChildren();
+  for (const p of plays) {
+    const li = document.createElement('li');
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = names.get(p.uid) ?? p.name ?? '（なまえ なし）';
+    const rec = document.createElement('span');
+    rec.className = 'rec';
+    const mine = p.uid === o.uid ? '　この たんまつ' : '';
+    rec.textContent = `${p.count}かい${mine}\nさいご ${shortDate(p.lastAt)}`;
+    rec.style.whiteSpace = 'pre-line';
+    li.append(who, rec);
+    list.appendChild(li);
+  }
+}
+
 /**
  * Admin page: every ranking entry with a delete button, sorted by name (then newest first) so a
  * player who played in two browsers shows up as two rows next to each other (marked).
@@ -796,11 +874,7 @@ async function showAdminScores(o: Online): Promise<void> {
   entries.sort((a, b) => a.name.localeCompare(b.name, 'ja') || (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
   const names = new Map<string, number>();
   for (const e of entries) names.set(e.name, (names.get(e.name) ?? 0) + 1);
-  const date = (ms?: number) => {
-    if (!ms) return '—';
-    const d = new Date(ms);
-    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
+  const date = shortDate;
   list.replaceChildren();
   for (const e of entries) {
     const li = document.createElement('li');
@@ -811,7 +885,10 @@ async function showAdminScores(o: Online): Promise<void> {
     const rec = document.createElement('span');
     rec.className = 'rec';
     const mine = e.uid === o.uid ? '　この たんまつ' : '';
-    rec.textContent = `${e.count}こ ${formatHeight(e.height)}m${mine}\nほぞん ${date(e.updatedAt)}`;
+    // A record reset by an admin shows as —.
+    const count = e.count > 0 ? `${e.count}こ` : '—こ';
+    const height = e.height > 0 ? `${formatHeight(e.height)}m` : '—m';
+    rec.textContent = `${count} ${height}${mine}\nほぞん ${date(e.updatedAt)}`;
     rec.style.whiteSpace = 'pre-line';
     const del = document.createElement('button');
     del.type = 'button';

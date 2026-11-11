@@ -60,4 +60,9 @@ describe('rankings with dummies', () => {
     // An older entry without the set: the same count with any height fills it in.
     expect(beatsRecord({ count: 8, height: 0.1 }, { uid: 'o', name: 'お', count: 8, height: 6 }, 'count')).toBe(true);
   });
+  it('leaves out a record that was reset (0) from that ranking only', () => {
+    const real = [{ uid: 'r', name: 'りせ', count: 0, height: 5 }];
+    expect(topRows(real, 'count').map((r) => r.uid)).not.toContain('r');
+    expect(topRows(real, 'height')[0].uid).toBe('r');
+  });
 });

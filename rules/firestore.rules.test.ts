@@ -5,7 +5,8 @@ import {
   assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, increment, limit, orderBy, query, serverTimestamp, setDoc,
+  where,
 } from 'firebase/firestore';
 
 const CODE = 'yamanashi-2026';
@@ -189,11 +190,54 @@ describe('scores', () => {
     // Renaming leaves both sets alone.
     await assertSucceeds(setDoc(ref, { name: 'ばすた', updatedAt: serverTimestamp() }, { merge: true }));
   });
+  it('admins reset one ranking: that record goes to 0, the rest stays', async () => {
+    const ref = (uid: string) => doc(as(uid), 'scores/member2');
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'scores/member2'), {
+        name: 'ばすた', count: 6, countHeight: 2.4, countAt: new Date(1), towerCount: 'v1|',
+        height: 3.1, heightCount: 5, heightAt: new Date(2), towerHeight: 'v1|', updatedAt: new Date(),
+      });
+    });
+    const resetCount = { count: 0, countHeight: deleteField(), countAt: deleteField(), towerCount: deleteField(), updatedAt: serverTimestamp() };
+    // Members cannot, admins can.
+    await assertFails(setDoc(ref('member2'), resetCount, { merge: true }));
+    await assertSucceeds(setDoc(ref('admin1'), resetCount, { merge: true }));
+    // Only a full reset: not part of a record, not a different value, not another field.
+    await assertFails(setDoc(ref('admin1'), { heightCount: deleteField(), updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref('admin1'), { height: 1, updatedAt: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(ref('admin1'), { name: 'わる', updatedAt: serverTimestamp() }, { merge: true }));
+    const resetHeight = { height: 0, heightCount: deleteField(), heightAt: deleteField(), towerHeight: deleteField(), updatedAt: serverTimestamp() };
+    await assertSucceeds(setDoc(ref('admin1'), resetHeight, { merge: true }));
+    // After a reset the player can set a new record again.
+    await assertSucceeds(setDoc(ref('member2'), { count: 2, countHeight: 1.1, countAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true }));
+  });
   it('rankings are readable by members only', async () => {
     const top = (uid: string) => getDocs(query(collection(as(uid), 'scores'), orderBy('height', 'desc'), limit(20)));
     await assertSucceeds(top('member1'));
     await assertSucceeds(top('admin1'));
     await assertFails(top('stranger'));
+  });
+});
+
+describe('plays', () => {
+  const play = (count: number, name?: string) => ({ count, lastAt: serverTimestamp(), ...(name ? { name } : {}) });
+  it('a member counts its own games one at a time', async () => {
+    const ref = doc(as('member1'), 'plays/member1');
+    await assertFails(setDoc(ref, play(2)));
+    await assertSucceeds(setDoc(ref, play(1)));
+    await assertSucceeds(setDoc(ref, { count: increment(1), lastAt: serverTimestamp(), name: 'やまな' }, { merge: true }));
+    await assertFails(setDoc(ref, play(5), { merge: true }));
+    await assertFails(setDoc(ref, { count: increment(1), lastAt: new Date(0) }, { merge: true }));
+    await assertFails(setDoc(ref, { count: increment(1), lastAt: serverTimestamp(), name: 'ヤマナ' }, { merge: true }));
+    await assertFails(setDoc(ref, { count: increment(1), lastAt: serverTimestamp(), x: 1 }, { merge: true }));
+  });
+  it('only for its own uid, only by members, readable by admins only', async () => {
+    await assertFails(setDoc(doc(as('member1'), 'plays/member2'), play(1)));
+    await assertFails(setDoc(doc(as('stranger'), 'plays/stranger'), play(1)));
+    await assertSucceeds(setDoc(doc(as('member1'), 'plays/member1'), play(1)));
+    await assertFails(getDoc(doc(as('member1'), 'plays/member1')));
+    await assertFails(getDocs(collection(as('member1'), 'plays')));
+    await assertSucceeds(getDocs(collection(as('admin1'), 'plays')));
   });
 });
 

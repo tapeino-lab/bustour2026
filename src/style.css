@@ -192,8 +192,22 @@ button {
 #name-ok { background: var(--red); color: #fff; min-width: 150px; }
 .namepad .row { margin-top: 18px; }
 .admin { width: min(360px, 94%); max-height: 90%; display: flex; flex-direction: column; }
+/* Admin page tabs: one area at a time (faces, ranking, play history, music). */
+.admin-tabs { display: flex; gap: 4px; margin: 4px 0 6px; border-bottom: 3px solid var(--ink); }
+.admin-tabs button {
+  flex: 1 1 auto; padding: 7px 4px 5px; border: 3px solid var(--ink); border-bottom: none; border-radius: 8px 8px 0 0;
+  background: #eee; font: inherit; font-size: 12px; white-space: nowrap; color: var(--ink);
+}
+.admin-tabs button[aria-selected='true'] { background: var(--yellow); }
+.admin-body { flex: 1; min-height: 0; overflow-y: auto; text-align: left; }
+.admin-resets { display: flex; gap: 8px; margin: 4px 0; }
+.admin-resets .reset-btn { flex: 1; padding: 8px 4px; border: 2px solid var(--ink); border-radius: 8px; background: #ffe0e0; font: inherit; font-size: 13px; }
+#admin-plays-list { list-style: none; margin: 4px 0; padding: 0; }
+#admin-plays-list li { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 2px solid #eee; }
+#admin-plays-list .who { flex: 0 0 7.5em; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#admin-plays-list .rec { font-size: 11px; line-height: 1.4; }
 .admin code { font-family: monospace; font-size: 11px; -webkit-user-select: all; user-select: all; word-break: break-all; }
-#admin-list { list-style: none; margin: 8px 0; padding: 0; overflow-y: auto; text-align: left; }
+#admin-list { list-style: none; margin: 8px 0; padding: 0; text-align: left; }
 #admin-list li { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 2px solid #eee; font-size: 14px; }
 #admin-list img, #admin-list .noface, #admin-list canvas.after { width: 44px; height: 44px; border: 2px solid var(--ink); border-radius: 50%; object-fit: cover; background: #ffe3c4; flex: none; }
 /* The uploaded photo and, overlapping it, how the game shows it (evened out). */
@@ -359,9 +373,7 @@ button {
   transform: rotate(-35deg);
 }
 .toggle[aria-pressed='true'] { background: var(--yellow); color: var(--ink); }
-.admin-scores { margin: 6px 0; font-size: 13px; }
-.admin-scores .small { margin: 4px 0; }
-#admin-scores-list { list-style: none; margin: 4px 0; padding: 0; max-height: 34vh; overflow-y: auto; text-align: left; }
+#admin-scores-list { list-style: none; margin: 4px 0; padding: 0; text-align: left; }
 #admin-scores-list li { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 2px solid #eee; }
 #admin-scores-list li.dup { background: #fff4b8; }
 #admin-scores-list .who { font-size: 15px; min-width: 3.4em; }
