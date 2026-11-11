@@ -331,7 +331,9 @@ export class Game {
     ctx.fillText(`${this.score}`, cx, 54);
     ctx.fillStyle = INK;
     ctx.font = `11px ${FONT}`;
-    ctx.fillText(`たかさ ${formatHeight(this.heightM)}m`, cx, 72);
+    // The height that counts for the ranking: the highest the tower has stood still in this game
+    // (a piece in the air or a wobbling tower never shows more).
+    ctx.fillText(`たかさ ${formatHeight(this.bestHeight)}m`, cx, 72);
     ctx.font = `11px ${FONT}`;
     ctx.fillText('つぎ', WORLD_WIDTH - 53, 27);
 
