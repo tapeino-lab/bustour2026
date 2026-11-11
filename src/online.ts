@@ -4,7 +4,7 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import {
   collection, connectFirestoreEmulator, deleteDoc, deleteField, doc, getDoc, getDocs, getFirestore, increment, limit,
-  orderBy, query, serverTimestamp, setDoc, Timestamp, where, writeBatch, type Firestore,
+  orderBy, query, serverTimestamp, setDoc, Timestamp, where, type Firestore,
 } from 'firebase/firestore';
 import { normalizeJoinCode } from './joincode';
 import { DEFAULT_ENHANCE, ENHANCE_LEVELS, type Enhance, type FacePhoto } from './faces';
@@ -245,39 +245,29 @@ export class Online {
     });
   }
 
-  /**
-   * Resets one ranking (admins only): everyone's count record (or height record) is cleared,
-   * the other record stays. An entry left with neither record is deleted. Returns how many
-   * entries had that record.
-   */
-  async resetRanking(kind: RankingKind): Promise<number> {
-    const other: RankingKind = kind === 'count' ? 'height' : 'count';
-    const cleared =
-      kind === 'count'
-        ? { count: 0, countHeight: deleteField(), countAt: deleteField(), towerCount: deleteField() }
-        : { height: 0, heightCount: deleteField(), heightAt: deleteField(), towerHeight: deleteField() };
-    const snap = await getDocs(collection(this.db, 'scores'));
-    const docs = snap.docs.filter((d) => Number(d.get(kind)) > 0);
-    // Small batches keep each request well under Firestore's per-request rule limits.
-    for (let i = 0; i < docs.length; i += 10) {
-      const batch = writeBatch(this.db);
-      for (const d of docs.slice(i, i + 10)) {
-        if (Number(d.get(other)) > 0) batch.set(d.ref, { ...cleared, updatedAt: serverTimestamp() }, { merge: true });
-        else batch.delete(d.ref);
-      }
-      await batch.commit();
-    }
-    return docs.length;
-  }
-
   /** Every ranking entry (admins only, for the admin page). */
   async allScores(): Promise<ScoreEntry[]> {
     const snap = await getDocs(collection(this.db, 'scores'));
     return snap.docs.map((d) => toEntry(d.id, d.data()));
   }
 
-  /** Deletes one ranking entry (admins only), e.g. an old one left in another browser. */
-  async deleteScore(uid: string): Promise<void> {
-    await deleteDoc(doc(this.db, 'scores', uid));
+  /**
+   * Resets one player's count record (or height record) (admins only): it is cleared, the other
+   * record stays. When the player then has neither record, the entry is deleted.
+   */
+  async resetScore(uid: string, kind: RankingKind): Promise<void> {
+    const ref = doc(this.db, 'scores', uid);
+    const d = await getDoc(ref);
+    if (!d.exists()) return;
+    const other: RankingKind = kind === 'count' ? 'height' : 'count';
+    if (!(Number(d.get(other)) > 0)) {
+      await deleteDoc(ref);
+      return;
+    }
+    const cleared =
+      kind === 'count'
+        ? { count: 0, countHeight: deleteField(), countAt: deleteField(), towerCount: deleteField() }
+        : { height: 0, heightCount: deleteField(), heightAt: deleteField(), towerHeight: deleteField() };
+    await setDoc(ref, { ...cleared, updatedAt: serverTimestamp() }, { merge: true });
   }
 }

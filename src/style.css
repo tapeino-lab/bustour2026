@@ -200,8 +200,6 @@ button {
 }
 .admin-tabs button[aria-selected='true'] { background: var(--yellow); }
 .admin-body { flex: 1; min-height: 0; overflow-y: auto; text-align: left; }
-.admin-resets { display: flex; gap: 8px; margin: 4px 0; }
-.admin-resets .reset-btn { flex: 1; padding: 8px 4px; border: 2px solid var(--ink); border-radius: 8px; background: #ffe0e0; font: inherit; font-size: 13px; }
 #admin-plays-list { list-style: none; margin: 4px 0; padding: 0; }
 #admin-plays-list li { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 2px solid #eee; }
 #admin-plays-list .who { flex: 0 0 7.5em; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -376,9 +374,13 @@ button {
 #admin-scores-list { list-style: none; margin: 4px 0; padding: 0; text-align: left; }
 #admin-scores-list li { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 2px solid #eee; }
 #admin-scores-list li.dup { background: #fff4b8; }
-#admin-scores-list .who { font-size: 15px; min-width: 3.4em; }
+#admin-scores-list .who { font-size: 15px; min-width: 3.2em; line-height: 1.1; }
+#admin-scores-list .who small { font-size: 10px; }
+#admin-scores-list .rec { white-space: pre; }
 #admin-scores-list .rec { font-size: 11px; line-height: 1.4; }
-#admin-scores-list button { margin-left: auto; flex: none; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 8px; background: #ffe0e0; font: inherit; font-size: 12px; }
+#admin-scores-list .resets { margin-left: auto; display: flex; flex: none; gap: 4px; }
+#admin-scores-list button { padding: 6px 6px; border: 2px solid var(--ink); border-radius: 8px; background: #ffe0e0; font: inherit; font-size: 11px; color: var(--ink); }
+#admin-scores-list button:disabled { opacity: 0.35; }
 .admin-bgm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
 .admin-bgm input { display: none; }
 .rename { margin-top: 8px; padding: 7px 16px; font-size: 13px; align-self: center; }

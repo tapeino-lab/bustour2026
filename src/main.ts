@@ -759,22 +759,6 @@ async function showAdmin(): Promise<void> {
     for (const tab of document.querySelectorAll<HTMLButtonElement>('#admin-tabs [data-tab]')) {
       tab.onclick = () => showAdminTab(o, tab.dataset.tab as AdminTab);
     }
-    const resetStatus = $('admin-reset-status');
-    for (const kind of ['count', 'height'] as RankingKind[]) {
-      const label = kind === 'count' ? 'こすう' : 'たかさ';
-      $(kind === 'count' ? 'admin-reset-count' : 'admin-reset-height').onclick = async () => {
-        if (!window.confirm(`${label}の ランキングを リセットしますか？（もとに もどせません。${kind === 'count' ? 'たかさ' : 'こすう'}は そのまま）`)) return;
-        resetStatus.textContent = 'リセットちゅう…';
-        try {
-          const n = await o.resetRanking(kind);
-          resetStatus.textContent = `${label}を リセットしました（${n}けん）`;
-          await showAdminScores(o);
-        } catch (e) {
-          // Show why (e.g. permission-denied when the console still has older rules).
-          resetStatus.textContent = `しっぱい（${(e as { code?: string }).code ?? String(e)}）`;
-        }
-      };
-    }
     const fileInput = $<HTMLInputElement>('admin-bgm-file');
     fileInput.onchange = async () => {
       const file = fileInput.files?.[0];
@@ -856,8 +840,9 @@ async function showAdminPlays(o: Online): Promise<void> {
 }
 
 /**
- * Admin page: every ranking entry with a delete button, sorted by name (then newest first) so a
- * player who played in two browsers shows up as two rows next to each other (marked).
+ * Admin page: every ranking entry with reset buttons for its count and height records, sorted
+ * by name (then newest first) so a player who played in two browsers shows up as two rows next
+ * to each other (marked).
  */
 async function showAdminScores(o: Online): Promise<void> {
   const status = $('admin-scores-status');
@@ -882,31 +867,44 @@ async function showAdminScores(o: Online): Promise<void> {
     const who = document.createElement('span');
     who.className = 'who';
     who.textContent = e.name;
+    // This device's own entry: marked under the name.
+    if (e.uid === o.uid) {
+      const mine = document.createElement('small');
+      mine.textContent = 'じぶん';
+      who.append(document.createElement('br'), mine);
+    }
     const rec = document.createElement('span');
     rec.className = 'rec';
-    const mine = e.uid === o.uid ? '　この たんまつ' : '';
-    // A record reset by an admin shows as —.
+    // A record reset by an admin shows as —. Under it: when the entry was last saved.
     const count = e.count > 0 ? `${e.count}こ` : '—こ';
     const height = e.height > 0 ? `${formatHeight(e.height)}m` : '—m';
-    rec.textContent = `${count} ${height}${mine}\nほぞん ${date(e.updatedAt)}`;
-    rec.style.whiteSpace = 'pre-line';
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.textContent = 'けす';
-    del.addEventListener('click', async () => {
-      const when = date(e.updatedAt);
-      if (!window.confirm(`「${e.name}」の きろく（${e.count}こ ${formatHeight(e.height)}m、${when}）を けしますか？（もとに もどせません）`)) return;
-      del.disabled = true;
-      try {
-        await o.deleteScore(e.uid);
-        if (e.uid === o.uid) myEntry = null;
-        await showAdminScores(o);
-      } catch (err) {
-        del.disabled = false;
-        status.textContent = `しっぱい（${(err as { code?: string }).code ?? String(err)}）`;
-      }
+    rec.textContent = `${count} ${height}\n${date(e.updatedAt)}`;
+    // Reset this player's count or height record (both reset: the entry is gone).
+    const buttons = (['count', 'height'] as RankingKind[]).map((kind) => {
+      const label = kind === 'count' ? 'こすう' : 'たかさ';
+      const value = kind === 'count' ? count : height;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = !(e[kind] > 0);
+      btn.addEventListener('click', async () => {
+        if (!window.confirm(`「${e.name}」の ${label}（${value}、${date(e.updatedAt)}）を リセットしますか？（もとに もどせません）`)) return;
+        btn.disabled = true;
+        try {
+          await o.resetScore(e.uid, kind);
+          await showAdminScores(o);
+        } catch (err) {
+          btn.disabled = false;
+          // Show why (e.g. permission-denied when the console still has older rules).
+          status.textContent = `しっぱい（${(err as { code?: string }).code ?? String(err)}）`;
+        }
+      });
+      return btn;
     });
-    li.append(who, rec, del);
+    const resets = document.createElement('span');
+    resets.className = 'resets';
+    resets.append(...buttons);
+    li.append(who, rec, resets);
     list.appendChild(li);
   }
 }
