@@ -109,6 +109,10 @@ function resize(): void {
   const rankBtn = $('ranking-open');
   rankBtn.style.left = `${10 * scale}px`;
   rankBtn.style.top = `${96 * scale}px`;
+  // The admin button (admins with ?admin=1 only) right under it: 40px button + 8px gap.
+  const adminBtn = $('admin-open');
+  adminBtn.style.left = `${10 * scale}px`;
+  adminBtn.style.top = `${96 * scale + 48}px`;
   buildBackground(canvas.width, canvas.height, scale * dpr);
   debug?.resize(`${w}×${h}`);
   // Resizing clears the canvas; draw again right away so no blank frame is ever shown.
@@ -925,7 +929,13 @@ async function initOnline(): Promise<void> {
   if (member) await becomeMember().catch(() => undefined);
   // Devices without the code are asked at every launch.
   else showJoin();
-  if (params.get('admin') === '1' && (await online.isAdmin().catch(() => false))) showDiagnostics();
+  const adminMode = params.get('admin') === '1' && (await online.isAdmin().catch(() => false));
+  if (adminMode) {
+    showDiagnostics();
+    // A button to open the admin page again later; never shown to anyone else.
+    $('admin-open').classList.remove('hidden');
+    $('admin-open').addEventListener('click', () => void showAdmin().catch(() => undefined));
+  }
   if (params.get('admin') === '1') await showAdmin().catch(() => undefined);
 }
 
